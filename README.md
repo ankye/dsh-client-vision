@@ -1,42 +1,118 @@
 # dsh-client-vision
 
-DeepSeek Harness 图像识别插件源码。给 harness 的 agent 补「看图」能力：截图（多粒度）→ 外部视觉通道（GPT）→ 文字描述。deepseek 模型本身无法理解图像语义，由本插件在模型之外完成识图闭环。
+English | [中文](README.zh.md)
 
-## 目录结构
+Give your DeepSeek Harness agent **eyes**. `dsh-client-vision` is a screen-capture + external image-recognition plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the agent takes a screenshot (or points at any image), hands it to a vision-capable model through a pluggable channel, and gets back plain text it can actually act on — **no multimodal model required**.
+
+## Why you want it
+
+- **DeepSeek can't see — now it can.** The harness model has no image input. This plugin runs the whole "look" outside the model and returns text the agent can reason about, exactly like Codex's semantic vision tool.
+- **Capture anything, any way.** `fullscreen` / `window` (with live window enumeration) / `region` / `interactive` — grab the browser, a game window, or one corner of the screen.
+- **Multi-channel by design.** Tools are decoupled from recognition backends. The `gpt` channel ships ready to use; adding Claude, Gemini, or a local model is **one `analyze()` implementation + one registry line** — the three tools never change.
+- **Secret-safe.** The API key lives in the harness `credentials` store (`VISION_GPT_API_KEY`) — never in settings files, logs, or the conversation transcript.
+- **Every preset, out of the box.** Mounted on the host plane, so `code`, `standard`, `cordis`, `minimal` — every agent sees the tools. No preset switching.
+- **Ready to ship.** Prebuilt bundles included; three install paths (drop into the monorepo / `pnpm publish` / tarball).
+- **Smart payloads.** Large captures are auto-downscaled and re-encoded (≤1568px JPEG q80) before they leave the machine.
+
+## Capabilities
+
+### Tools
+
+| Tool | What it does |
+|---|---|
+| `take_screenshot` | Capture the screen: `fullscreen` (primary display), `window` (by id from `list_windows`), `region` (x, y, width, height), or `interactive` (user selection). Returns the PNG path + dimensions. |
+| `list_windows` | Enumerate on-screen windows (`id`, `app`, `title`) via macOS `CGWindowList` — pick the browser or game window to capture. |
+| `analyze_image` | Submit an image (a path, or the most recent screenshot) to the configured vision channel and return a plain-text description. |
+
+### Settings (`vision` namespace)
+
+Configured in **Settings → Plugins → Plugin configuration → Vision**:
+
+| Field | Meaning |
+|---|---|
+| Endpoint (`baseUrl`) | Domain + optional path prefix; `/chat/completions` is appended. e.g. `https://token.uzstudio.com/v1` |
+| Channel | The active recognition backend (currently `gpt`). |
+| Model | `gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra` |
+| API key | Stored through the harness `credentials` service as `VISION_GPT_API_KEY`; the literal never leaves your machine. |
+
+### Multi-channel architecture
 
 ```
-packages/
-  tool-vision/    # @deepseek-ai/dsh-tool-vision       —— host 工具包
-                  #   take_screenshot / list_windows / analyze_image
-                  #   + `vision` 设置命名空间 + gpt 识图通道（src/channels/gpt/）
-  ui-vision/      # @deepseek-ai/dsh-client-ui-vision   —— 浏览器设置卡片
-                  #   Settings → 插件 → 插件配置 →「图像识别」
+model → analyze_image(image, prompt)
+          │  reads vision.channel
+          ▼
+  channels/<id>/analyze()        ← one implementation per backend
+          │
+  gpt:    POST {baseUrl}/chat/completions   (image_url data URL)
+  claude / gemini / local: …    ← add yours here
 ```
 
-- 工具入口与识图通道解耦：加新通道 = `src/channels/<id>/` 一个 `analyze()` + 注册进 `channels/index.ts`，工具契约不变。
-- 密钥走 harness `credentials` 服务（`VISION_GPT_API_KEY`），值永不下发浏览器、不进设置文件。
+Adding a channel is deliberately small:
 
-## 前置条件
+```ts
+// src/channels/<id>/index.ts
+export async function myAnalyze(ctx, call): Promise<string> {
+  // call.imageB64, call.mime, call.prompt, call.config, call.signal
+  return await fetchYourVisionApi(...)
+}
+```
 
-- 同源的 DeepSeek Harness 部署（本代码基于 `0.1.0-rc.7` 系）。
-- macOS（截图/窗口枚举为 macOS-only；非 macOS 行自动禁用）。
+```ts
+// src/channels/index.ts — one registry line
+export const channels = {
+  gpt: { label: 'GPT', analyze: gptAnalyze },
+  myChannel: { label: 'My Channel', analyze: myAnalyze },
+}
+```
 
-## 安装到 Harness 部署（三选一）
+The tools (`take_screenshot` / `list_windows` / `analyze_image`) and their schemas never change.
 
-### A. 拖入 harness monorepo（团队内最快）
+## Installation
 
-把两个包目录分别复制到对应位置，提交：
+### Prerequisites
 
-```bash
+- A DeepSeek Harness deployment from the same lineage (`0.1.0-rc.7`).
+- macOS (capture is macOS-only; the rows disable themselves on other platforms).
+
+### Option A — Drop into the harness monorepo (team / fastest)
+
+```sh
 cp -R packages/tool-vision <harness>/packages/vision/tool-vision
 cp -R packages/ui-vision   <harness>/packages/client/ui-vision
 ```
 
-再在 harness 仓库内：
-1. `apps/cli/package.json` 加两个依赖：`@deepseek-ai/dsh-tool-vision`、`@deepseek-ai/dsh-client-ui-vision`（`workspace:^`）。
-2. `tsconfig.host.json` 加 `./packages/vision/tool-vision` 引用；`tsconfig.client.json` 加 `./packages/client/ui-vision` 引用。
-3. `pnpm install`，然后 `pnpm exec tsdown --env.DSH_BUILD_FACE host` 和 `... client` 构建两个包。
-4. 在 `~/.dsh/cordis.patch.yml`（harness-home patch，对所有 profile 生效）加：
+Then, inside the harness repo:
+
+1. Add `@deepseek-ai/dsh-tool-vision` and `@deepseek-ai/dsh-client-ui-vision` to `apps/cli/package.json` (`workspace:^`).
+2. Add `./packages/vision/tool-vision` to `tsconfig.host.json` and `./packages/client/ui-vision` to `tsconfig.client.json`.
+3. `pnpm install`, then build both packages:
+   ```sh
+   pnpm exec tsdown --env.DSH_BUILD_FACE host
+   pnpm exec tsdown --env.DSH_BUILD_FACE client
+   ```
+4. Mount + restart (below).
+
+### Option B — Publish to npm / a private registry (recommended for distribution)
+
+```sh
+cd packages/tool-vision && pnpm publish
+cd packages/ui-vision   && pnpm publish
+```
+
+Recipients: `dsh plugin --profile web add @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision`, then mount + restart.
+
+### Option C — Tarball (small scale)
+
+```sh
+cd packages/tool-vision && npm pack    # deepseek-ai-dsh-tool-vision-0.1.0-rc.7.tgz
+cd packages/ui-vision   && npm pack    # deepseek-ai-dsh-client-ui-vision-0.1.0-rc.7.tgz
+```
+
+Recipients: `cd ~/.dsh/profiles/web && pnpm add file:/path/to/*.tgz`, then mount + restart.
+
+### Mount (all options)
+
+Add two rows to `~/.dsh/cordis.patch.yml` (the harness-home patch, applied to every profile), then restart:
 
 ```yaml
 - insert:
@@ -47,37 +123,18 @@ cp -R packages/ui-vision   <harness>/packages/client/ui-vision
       name: '@deepseek-ai/dsh-client-ui-vision'
 ```
 
-5. 重启 harness。
+## Quick start
 
-### B. 发布 npm / 内部 registry
+1. Restart the harness.
+2. The tool catalog now includes `take_screenshot` / `list_windows` / `analyze_image`.
+3. Open **Settings → Plugins → Plugin configuration → Vision**, set the endpoint, model, and your own API key, and save.
+4. Ask the agent to "look at the screen" — it will screenshot and describe what it sees.
 
-```bash
-cd packages/tool-vision && pnpm publish   # 自动把 ^0.1.0-rc.7 的 peer 依赖按需对齐
-cd packages/ui-vision   && pnpm publish
-```
+## Development
 
-对方独立部署：`dsh plugin --profile web add @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision`，再加 patch 两行（同 A 第 4 步），重启。
-
-### C. Tarball
-
-```bash
-cd packages/tool-vision && npm pack
-cd packages/ui-vision   && npm pack
-# 对方：cd ~/.dsh/profiles/web && pnpm add file:/path/to/*.tgz（或 dsh plugin add file:...）
-# patch 两行 → 重启
-```
-
-## 使用与配置
-
-1. 重启后工具目录出现 `take_screenshot` / `list_windows` / `analyze_image`（**所有 preset 可用**，host 层全局挂载）。
-2. 设置 → 插件 → 插件配置 →「图像识别」卡片：填端点（如 `https://token.uzstudio.com/v1`）、选模型（`gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra`）、填自己的 API Key（存为 `VISION_GPT_API_KEY`），保存。
-3. 让 agent 执行 `take_screenshot` → `analyze_image`。
-
-## 开发说明
-
-- 本仓库是**源码分发**形态：peer 依赖（`@deepseek-ai/dsh-tools` 等）来自部署，独立安装无法凭空解析；`lib/` 内已附构建产物，可直接 `npm pack` 分发。
-- 包内 `tsconfig.json` 已适配独立目录；harness monorepo 内的构建管线（含 client bundle 的 `tsdown.config.ts`）请按方式 A 在 monorepo 内生成。
-- **密钥绝不提交**：`.credentials.yaml` 是每台机器的私有文件；本仓库不包含任何凭据。
+- This repository is a **source distribution**: the peer packages (`@deepseek-ai/dsh-tools`, …) resolve from your deployment. `lib/` ships prebuilt, so `npm pack` works immediately.
+- The `tsconfig.json` files are standalone; the harness monorepo's build pipeline (including the client-bundle `tsdown.config.ts`) applies in Option A.
+- **Never commit secrets.** The API key stays in each machine's `.credentials.yaml`.
 
 ## License
 
