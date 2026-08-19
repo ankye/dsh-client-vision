@@ -47,6 +47,19 @@ Configured in **Settings → Plugins → Plugin configuration → Vision**:
 | Model | `gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra` |
 | API key | Stored through the harness `credentials` service as `VISION_GPT_API_KEY`; the literal never leaves your machine. |
 
+### Channels
+
+| Channel | Backend | Model | API key |
+|---|---|---|---|
+| `gpt` | OpenAI-compatible `/chat/completions` | `gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra` | required (e.g. `VISION_GPT_API_KEY`) |
+| `zhipu` | Zhipu GLM-4V, OpenAI-compatible `/chat/completions` | `glm-4v-plus` / `glm-4v-flash` | required (e.g. `VISION_ZHIPU_API_KEY`) |
+| `ollama` | local Ollama `/api/chat` (default `http://localhost:11434`) | `llava` / `llava-llama3` / `bakllava` / `moondream` / `qwen2-vl` / `minicpm-v` (or any installed vision model) | none |
+
+Pick the channel in **Settings → Plugins → Vision**; the model dropdown follows
+the channel and the API-key control is hidden for `ollama`. For `ollama` the
+base URL defaults to `http://localhost:11434` and the model to `llava` when
+left blank.
+
 ### Multi-channel architecture
 
 ```
