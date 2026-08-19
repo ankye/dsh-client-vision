@@ -67,61 +67,72 @@ export const channels = {
 
 `take_screenshot` / `list_windows` / `analyze_image` 三个工具及其 schema **永远不用改**。
 
-## 安装方式
+## 安装方式（官方部署，不改仓库）
+
+`dsh plugin add` 把包装进 profile；每个包都声明了 `dsh.bundle`，挂载自动完成——**不需要手写 patch 行、不需要改官方工程**。
 
 ### 前置条件
 
-- 同源的 DeepSeek Harness 部署（基于 `0.1.0-rc.7` 系）。
-- macOS（截图/窗口枚举为 macOS-only；非 macOS 上对应行会自动禁用）。
+- 官方 DeepSeek Harness（`0.1.0-rc.7` 系），`dsh` 与 `pnpm` 在 PATH。
 
-### 方式 A — 拖入 harness monorepo（团队内最快）
+### 1. 取包（三选一）
+
+**a. 从本仓库（发布前推荐）：**
+
+```sh
+dsh plugin --profile web add \
+  file:/path/to/dsh-client-vision/packages/tool-vision \
+  file:/path/to/dsh-client-vision/packages/ui-vision
+```
+
+**b. Tarball：**
+
+```sh
+cd packages/tool-vision && npm pack
+cd packages/ui-vision   && npm pack
+dsh plugin --profile web add file:/path/to/deepseek-ai-dsh-tool-vision-0.1.0-rc.7.tgz \
+                            file:/path/to/deepseek-ai-dsh-client-ui-vision-0.1.0-rc.7.tgz
+```
+
+**c. npm registry（发布后）：**
+
+```sh
+dsh plugin --profile web add @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision
+```
+
+> 安装时的 `[WARN] Issues with peer dependencies` 是正常的，可忽略——peer 由部署自身的 bundle 在运行时提供。
+
+### 2. 验证安装
+
+```sh
+node -e "console.log(JSON.stringify(require(process.env.HOME + '/.dsh/profiles/web/package.json').dsh.profile.bundles))"
+# 应包含 dsh-tool-vision 与 dsh-client-ui-vision
+```
+
+### 3. 重启 + 配置
+
+重启 harness，打开 **设置 → 插件 → 插件配置 →「图像识别」**：填接口地址、模型和你自己的 API Key（`VISION_GPT_API_KEY`），保存。
+
+### 4. 功能验证
+
+让 agent「看一下屏幕」——它会调用 `take_screenshot` → `analyze_image` 并描述看到的内容。
+
+### 卸载
+
+```sh
+dsh plugin --profile web remove @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision
+```
+
+## 备选：在 harness 分支内构建
+
+如果你运行的是 deepseek-harness 的**分支**（而非官方部署），也可以把包拖进 monorepo：
 
 ```sh
 cp -R packages/tool-vision <harness>/packages/vision/tool-vision
 cp -R packages/ui-vision   <harness>/packages/client/ui-vision
 ```
 
-然后在 harness 仓库内：
-
-1. `apps/cli/package.json` 加两个依赖：`@deepseek-ai/dsh-tool-vision`、`@deepseek-ai/dsh-client-ui-vision`（`workspace:^`）。
-2. `tsconfig.host.json` 加 `./packages/vision/tool-vision` 引用；`tsconfig.client.json` 加 `./packages/client/ui-vision` 引用。
-3. `pnpm install`，构建两个包：
-   ```sh
-   pnpm exec tsdown --env.DSH_BUILD_FACE host
-   pnpm exec tsdown --env.DSH_BUILD_FACE client
-   ```
-4. 挂载 + 重启（见下）。
-
-### 方式 B — 发布 npm / 内部 registry（正式分发，推荐）
-
-```sh
-cd packages/tool-vision && pnpm publish
-cd packages/ui-vision   && pnpm publish
-```
-
-对方：`dsh plugin --profile web add @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision`，再挂载 + 重启。
-
-### 方式 C — Tarball（小范围）
-
-```sh
-cd packages/tool-vision && npm pack    # deepseek-ai-dsh-tool-vision-0.1.0-rc.7.tgz
-cd packages/ui-vision   && npm pack    # deepseek-ai-dsh-client-ui-vision-0.1.0-rc.7.tgz
-```
-
-对方：`cd ~/.dsh/profiles/web && pnpm add file:/path/to/*.tgz`，再挂载 + 重启。
-
-### 挂载（三种方式相同）
-
-在 `~/.dsh/cordis.patch.yml`（harness-home patch，对所有 profile 生效）加两行，然后重启：
-
-```yaml
-- insert:
-    - id: tool-vision
-      name: '@deepseek-ai/dsh-tool-vision'
-      disabled: !!js process.platform !== 'darwin'
-    - id: ui-vision
-      name: '@deepseek-ai/dsh-client-ui-vision'
-```
+然后在 harness 仓库内：`apps/cli/package.json` 加两个依赖（`workspace:^`）、`tsconfig.host.json`/`tsconfig.client.json` 加引用、`pnpm install`、构建（tsdown host + client），重启。
 
 ## 快速上手
 

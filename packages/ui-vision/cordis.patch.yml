@@ -1,0 +1,5 @@
+# @deepseek-ai/dsh-client-ui-vision bundle patch: mounts the vision settings
+# card into the configurable-plugins tab.
+- insert:
+    - id: ui-vision
+      name: '@deepseek-ai/dsh-client-ui-vision'
