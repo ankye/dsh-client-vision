@@ -1,2 +1,3 @@
 packages:
   - packages/*
+auto-install-peers: false
