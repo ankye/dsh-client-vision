@@ -1,0 +1,6 @@
+{
+  "name": "dsh-client-vision",
+  "private": true,
+  "description": "DeepSeek Harness 图像识别插件源码：host 工具包 @deepseek-ai/dsh-tool-vision + client 设置卡片 @deepseek-ai/dsh-client-ui-vision",
+  "license": "MIT"
+}

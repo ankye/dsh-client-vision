@@ -1,0 +1,71 @@
+/** Locale bundles for the vision settings card (its own namespace). */
+
+/** Locale keys these surfaces render. */
+export type VisionLocaleKey =
+  | 'title' | 'description'
+  | 'apiKey' | 'apiKeyHint' | 'apiKeySet' | 'apiKeyUnset'
+  | 'baseUrl' | 'baseUrlHint'
+  | 'channel' | 'channelHint'
+  | 'model' | 'modelHint'
+  | 'overridden' | 'reset' | 'readOnly' | 'expand' | 'collapse'
+  | 'save' | 'saving' | 'discard' | 'unsaved' | 'saveFailed' | 'invalidNumber'
+
+/** English copy. */
+export const en: Record<VisionLocaleKey, string> = {
+  title: 'Vision',
+  description: 'Screen capture and external image recognition.',
+  apiKey: 'API key',
+  apiKeyHint: 'Stored outside the settings file. Leave blank to keep the current key.',
+  apiKeySet: 'A key is configured.',
+  apiKeyUnset: 'No key is configured; recognition is unavailable until one is.',
+  baseUrl: 'Endpoint',
+  baseUrlHint: 'Domain and optional path prefix; /chat/completions is appended.',
+  channel: 'Recognition channel',
+  channelHint: 'Which external vision backend analyze_image dispatches to.',
+  model: 'Model',
+  modelHint: 'Which model the selected channel uses for recognition.',
+  overridden: 'Overridden',
+  reset: 'Reset to default',
+  readOnly: 'This deployment stores settings read-only.',
+  expand: 'Show settings',
+  collapse: 'Hide settings',
+  save: 'Save',
+  saving: 'Saving…',
+  discard: 'Discard',
+  unsaved: 'Unsaved',
+  saveFailed: 'The deployment did not accept these values; they were left for you to correct.',
+  invalidNumber: 'Enter a number, or leave blank to use the default.',
+}
+
+/** Simplified Chinese copy. */
+export const zh: Record<VisionLocaleKey, string> = {
+  title: '图像识别',
+  description: '屏幕截图与外部图像识别。',
+  apiKey: 'API Key',
+  apiKeyHint: '不写入设置文件。留空表示保持当前密钥。',
+  apiKeySet: '已配置密钥。',
+  apiKeyUnset: '未配置密钥；配置之前识别不可用。',
+  baseUrl: '接口地址',
+  baseUrlHint: '域名与可选路径前缀；会自动拼接 /chat/completions。',
+  channel: '识别通道',
+  channelHint: 'analyze_image 派发到哪个外部视觉后端。',
+  model: '模型',
+  modelHint: '当前通道识别时使用的模型。',
+  overridden: '已覆盖',
+  reset: '恢复默认',
+  readOnly: '本部署的设置为只读。',
+  expand: '展开设置',
+  collapse: '收起设置',
+  save: '保存',
+  saving: '保存中…',
+  discard: '放弃修改',
+  unsaved: '未保存',
+  saveFailed: '本部署没有接受这些值，已保留供你修改。',
+  invalidNumber: '请填数字；留空表示使用默认值。',
+}
+
+declare module '@deepseek-ai/dsh-client-ui-slots' {
+  interface LocaleNamespaceMap {
+    vision: VisionLocaleKey
+  }
+}

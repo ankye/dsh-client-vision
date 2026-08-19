@@ -1,0 +1,54 @@
+/**
+ * Vision settings card, browser half — one card registered into the
+ * configurable-plugins tab under the `vision` settings namespace.
+ *
+ * The tab (owned by ui-settings-plugins) enumerates Host-served namespaces
+ * and dispatches cards by key; this package contributes only its own card and
+ * locale. Cross-package collaboration goes through the service — the slot
+ * declaration, the settings scope, the credentials domain — never a value
+ * import (client bundle purity gate).
+ */
+
+import type { ConnectionHandle } from '@deepseek-ai/dsh-client-connection/client'
+// Type-only: the locale plugin's Context merge (ctx.locale).
+import type {} from '@deepseek-ai/dsh-client-locale/client'
+// Type-only: the settings shell's SlotMap merge and the ctx.settingsScope
+// Context merge.
+import type {} from '@deepseek-ai/dsh-client-ui-settings/client'
+// Type-only: the settings.plugin.item slot declaration (ui-settings-plugins).
+import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
+import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
+// Type-only: the ctx.remote Context merge and the forwarded-event key face.
+import type {} from '@deepseek-ai/dsh-api-remotes/client'
+import { VisionCard } from './VisionCard.tsx'
+import { VISION_NS, VisionCardController } from './vision-card-controller.ts'
+import { en, zh } from './locales.ts'
+
+/** Required services (cordis fiber inject). */
+export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope']
+
+/**
+ * Mount the vision settings card.
+ * @param ctx - the browser plugin context.
+ */
+export function apply(ctx: ClientContext): void {
+  const { api } = ctx.get('connection') as ConnectionHandle
+  ctx.effect(() => ctx.locale.register(VISION_NS, { zh, en }), 'ui-vision: dictionaries')
+
+  const vision = new VisionCardController(ctx.settingsScope.bind({ namespace: VISION_NS }), api)
+
+  // A key written on another surface (Models page, another card) reaches the
+  // Host without touching this section; the forwarded event is the only
+  // signal the badge can re-read on.
+  ctx.effect(
+    () => ctx.remote.$on('credentials/updated', (ref) => { vision.refreshCredential(ref) }),
+    'ui-vision: credential invalidations',
+  )
+
+  ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
+    name: 'settings.plugin.item',
+    key: VISION_NS,
+    locale: VISION_NS,
+    inject: () => vision.inject(),
+  }, VisionCard))
+}
