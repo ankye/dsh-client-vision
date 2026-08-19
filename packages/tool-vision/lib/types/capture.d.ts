@@ -1,9 +1,23 @@
 /**
- * Screen capture and window enumeration through the `ctx.shell` seam
- * (macOS `screencapture` + a Swift `CGWindowList` snippet).
+ * Screen capture and window enumeration through the `ctx.shell` seam.
+ *
+ * Backends are selected by platform — the harness `shell` service runs
+ * `bash -c` on macOS/Linux and PowerShell on Windows:
+ *
+ * - macOS: `screencapture` + a Swift `CGWindowList` snippet (no extra deps).
+ * - Windows: PowerShell `System.Drawing` + `Get-Process` (no extra deps).
+ * - Linux: ImageMagick `import` + `wmctrl`/`xprop` (X11 tooling).
  * @module @deepseek-ai/dsh-tool-vision/capture
  */
 import type { Context } from '@deepseek-ai/cordis';
+/** A platform the capture backend can run on. */
+export type CapturePlatform = 'darwin' | 'win32' | 'linux';
+/**
+ * The platform this process runs on. Anything that is neither macOS nor
+ * Windows is treated as Linux (the X11 tooling path).
+ * @returns the capture backend platform.
+ */
+export declare function currentPlatform(): CapturePlatform;
 /** The `take_screenshot` tool's arguments. */
 export interface ScreenshotArgs {
     /** What to capture. */
@@ -21,25 +35,29 @@ export interface ScreenshotArgs {
 }
 /** One enumerated on-screen window. */
 export interface WindowEntry {
-    /** CGWindowNumber, usable as `screencapture -l` id. */
+    /** Platform window id (CGWindowNumber / HWND / X11 id), usable as `mode=window` input. */
     id: number;
     /** Owning application name. */
     app: string;
     /** Window title (may be empty when the app exposes none). */
     title: string;
 }
+/** Missing-dependency hint appended to a failed capture/enumeration error. */
+export declare function captureDependencyHint(platform: CapturePlatform): string;
 /**
- * Build the `screencapture` command for one capture request.
+ * Build the capture command for one request on the given platform.
  * @param args - the tool arguments.
- * @param outPath - the PNG path the capture writes.
- * @returns the command line to run.
+ * @param outPath - the PNG path the capture writes (absolute).
+ * @param platform - the capture backend platform (defaults to this process's).
+ * @returns the command line to run through the shell seam.
  */
-export declare function buildScreenshotCommand(args: ScreenshotArgs, outPath: string): string;
+export declare function buildScreenshotCommand(args: ScreenshotArgs, outPath: string, platform?: CapturePlatform): string;
 /**
- * Enumerate normal-layer on-screen windows through `swift -` (stdin).
+ * Enumerate on-screen windows through the platform backend.
  * @param ctx - plugin context supplying the shell seam.
  * @param signal - caller cancellation signal.
- * @returns the window entries, ordered as CoreGraphics reported them.
+ * @param platform - the capture backend platform (defaults to this process's).
+ * @returns the window entries, ordered as the backend reported them.
  */
-export declare function listWindowsViaShell(ctx: Context, signal?: AbortSignal): Promise<WindowEntry[]>;
+export declare function listWindowsViaShell(ctx: Context, signal: AbortSignal | undefined, platform?: CapturePlatform): Promise<WindowEntry[]>;
 //# sourceMappingURL=capture.d.ts.map
