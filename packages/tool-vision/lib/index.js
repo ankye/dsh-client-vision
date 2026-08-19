@@ -320,6 +320,127 @@ async function resolveApiKey(ctx, apiKeyEnv, signal) {
 	if (resolved !== void 0 && resolved.value.length > 0) return resolved.value;
 	throw new Error(`vision has no API key for "${apiKeyEnv}"; set it in Settings → Plugins → Vision`);
 }
+/**
+* Resolve the effective Ollama endpoint (trailing slashes trimmed; falls back
+* to the local default).
+* @param baseUrl - the configured endpoint, possibly blank.
+* @returns the endpoint with no trailing slash.
+*/
+function resolveOllamaEndpoint(baseUrl) {
+	return (baseUrl ?? "").trim().replace(/\/+$/, "") || "http://localhost:11434";
+}
+/**
+* Build the `/api/chat` request body. The image travels as a bare base64
+* string in the `images` array (Ollama's format, not a data URL).
+* @param model - the model name (blank falls back to the default).
+* @param prompt - the user instruction.
+* @param imageB64 - base64-encoded image bytes.
+* @returns the JSON body.
+*/
+function buildOllamaChatBody(model, prompt, imageB64) {
+	return {
+		model: (model ?? "").trim() || "llava",
+		messages: [{
+			role: "user",
+			content: prompt,
+			images: [imageB64]
+		}],
+		stream: false
+	};
+}
+/**
+* Extract the plain-text answer from an Ollama `/api/chat` payload.
+* @param payload - the parsed response.
+* @returns the trimmed answer.
+*/
+function ollamaAnswerOf(payload) {
+	const content = (payload?.message)?.content;
+	if (typeof content !== "string" || content.trim() === "") throw new Error("ollama returned an empty answer (is the model vision-capable?)");
+	return content.trim();
+}
+//#endregion
+//#region lib/types/channels/ollama/index.js
+/**
+* The `ollama` local channel: a native `POST /api/chat` call to a local
+* Ollama server (default http://localhost:11434). No API key — the model runs
+* on the machine. Accepts any installed vision model (`llava`,
+* `llava-llama3`, `bakllava`, `moondream`, `qwen2-vl`, `minicpm-v`, …).
+* @module @deepseek-ai/dsh-tool-vision/channels/ollama
+*/
+/**
+* Run one vision call against a local Ollama server.
+* @param _ctx - plugin context (unused: no credentials involved).
+* @param call - the prepared image and the active section.
+* @returns the model's plain-text answer.
+*/
+async function ollamaAnalyze(_ctx, call) {
+	const { config, imageB64, prompt, signal } = call;
+	const baseUrl = resolveOllamaEndpoint(config.baseUrl);
+	const body = buildOllamaChatBody(config.model, prompt, imageB64);
+	let response;
+	try {
+		response = await fetch(`${baseUrl}/api/chat`, {
+			method: "POST",
+			redirect: "error",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify(body),
+			...signal !== void 0 ? { signal } : {}
+		});
+	} catch (error) {
+		if (signal?.aborted === true || isAbortError(error)) throw abortedError();
+		throw new Error(`ollama request failed (is the Ollama server running at ${baseUrl}?): ${String(error)}`);
+	}
+	let payload;
+	try {
+		payload = await response.json();
+	} catch (error) {
+		if (signal?.aborted === true || isAbortError(error)) throw abortedError();
+		throw new Error(`ollama returned an unprocessable response (HTTP ${response.status}): ${String(error)}`);
+	}
+	if (!response.ok) {
+		const detail = typeof payload.error === "string" && payload.error.length > 0 ? payload.error : `HTTP ${response.status}`;
+		throw new Error(`ollama request failed: ${detail}`);
+	}
+	return ollamaAnswerOf(payload);
+}
+//#endregion
+//#region lib/types/channels/zhipu/request.js
+/** Default Zhipu endpoint prefix; `/chat/completions` is appended. */
+const ZHIPU_DEFAULT_BASE_URL = "https://open.bigmodel.cn/api/paas/v4";
+/**
+* Validate the configured endpoint, returning it trimmed of trailing slashes.
+* @param baseUrl - the configured endpoint, possibly blank.
+* @returns the endpoint with no trailing slash.
+* @throws when no endpoint is configured.
+*/
+function requireZhipuEndpoint(baseUrl) {
+	const endpoint = (baseUrl ?? "").trim().replace(/\/+$/, "");
+	if (endpoint === "") throw new Error(`zhipu has no endpoint (vision.baseUrl); set it in Settings → Plugins → Vision — e.g. ${ZHIPU_DEFAULT_BASE_URL}`);
+	return endpoint;
+}
+//#endregion
+//#region lib/types/channels/zhipu/index.js
+/**
+* The `zhipu` channel: Zhipu GLM-4V (OpenAI-compatible
+* `POST /chat/completions`, image_url data URL). The request shape is
+* identical to the `gpt` channel, so this channel reuses `gptAnalyze` and
+* only adds its endpoint check.
+*
+* Default endpoint: https://open.bigmodel.cn/api/paas/v4
+* @module @deepseek-ai/dsh-tool-vision/channels/zhipu
+*/
+/**
+* Run one vision call against Zhipu. Shares the OpenAI-compatible request
+* with the gpt channel; the endpoint is checked here so a missing baseUrl
+* fails with an actionable message instead of a fetch on a relative URL.
+* @param ctx - plugin context supplying the credentials seam.
+* @param call - the prepared image and the active section.
+* @returns the model's plain-text answer.
+*/
+async function zhipuAnalyze(ctx, call) {
+	requireZhipuEndpoint(call.config.baseUrl);
+	return gptAnalyze(ctx, call);
+}
 //#endregion
 //#region lib/types/channels/index.js
 /**
@@ -329,10 +450,20 @@ async function resolveApiKey(ctx, apiKeyEnv, signal) {
 * @module @deepseek-ai/dsh-tool-vision/channels
 */
 /** Registered recognition channels, keyed by the `vision.channel` setting. */
-const channels = { gpt: {
-	label: "GPT",
-	analyze: gptAnalyze
-} };
+const channels = {
+	gpt: {
+		label: "GPT",
+		analyze: gptAnalyze
+	},
+	zhipu: {
+		label: "Zhipu GLM-4V",
+		analyze: zhipuAnalyze
+	},
+	ollama: {
+		label: "Ollama (local)",
+		analyze: ollamaAnalyze
+	}
+};
 //#endregion
 //#region lib/types/index.js
 /**

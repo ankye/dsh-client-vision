@@ -20,14 +20,14 @@ window.__ModuleLoader__.load({
 		}
 		var fields_module_css_default = {
 			"badge": "t7dRiq_badge",
-			"invalid": "t7dRiq_invalid",
-			"label": "t7dRiq_label",
-			"inputInvalid": "t7dRiq_inputInvalid",
 			"hint": "t7dRiq_hint",
-			"input": "t7dRiq_input",
-			"field": "t7dRiq_field",
-			"badgeMuted": "t7dRiq_badgeMuted",
+			"label": "t7dRiq_label",
 			"badges": "t7dRiq_badges",
+			"invalid": "t7dRiq_invalid",
+			"input": "t7dRiq_input",
+			"inputInvalid": "t7dRiq_inputInvalid",
+			"badgeMuted": "t7dRiq_badgeMuted",
+			"field": "t7dRiq_field",
 			"head": "t7dRiq_head",
 			"reset": "t7dRiq_reset"
 		};
@@ -197,21 +197,21 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var PluginCard_module_css_default = {
-			"headText": "xS_YIG_headText",
-			"cardOpen": "xS_YIG_cardOpen",
-			"name": "xS_YIG_name",
-			"discard": "xS_YIG_discard",
 			"save": "xS_YIG_save",
+			"body": "xS_YIG_body",
+			"pending": "xS_YIG_pending",
+			"name": "xS_YIG_name",
 			"header": "xS_YIG_header",
+			"description": "xS_YIG_description",
 			"failed": "xS_YIG_failed",
 			"chevron": "xS_YIG_chevron",
-			"pending": "xS_YIG_pending",
+			"footer": "xS_YIG_footer",
 			"card": "xS_YIG_card",
-			"chevronOpen": "xS_YIG_chevronOpen",
-			"description": "xS_YIG_description",
-			"body": "xS_YIG_body",
 			"readOnly": "xS_YIG_readOnly",
-			"footer": "xS_YIG_footer"
+			"headText": "xS_YIG_headText",
+			"discard": "xS_YIG_discard",
+			"chevronOpen": "xS_YIG_chevronOpen",
+			"cardOpen": "xS_YIG_cardOpen"
 		};
 		//#endregion
 		//#region lib/types/client/PluginCard.js
@@ -525,13 +525,32 @@ window.__ModuleLoader__.load({
 		/** Credential reference the provider resolves when the section names none. */
 		const DEFAULT_API_KEY_REF = "VISION_GPT_API_KEY";
 		/** Recognition channels offered by the current host package. */
-		const VISION_CHANNELS = ["gpt"];
-		/** Models offered by the `gpt` channel (aligned with the host's model list). */
-		const VISION_MODELS = [
-			"gpt-5.5",
-			"gpt-5.6-sol",
-			"gpt-5.6-terra"
+		const VISION_CHANNELS = [
+			"gpt",
+			"zhipu",
+			"ollama"
 		];
+		/**
+		* Models offered per channel (aligned with the host package's model lists).
+		* The model control is free-text; these lists drive the dropdown options and
+		* switch with the selected channel.
+		*/
+		const VISION_MODEL_LISTS = {
+			gpt: [
+				"gpt-5.5",
+				"gpt-5.6-sol",
+				"gpt-5.6-terra"
+			],
+			zhipu: ["glm-4v-plus", "glm-4v-flash"],
+			ollama: [
+				"llava",
+				"llava-llama3",
+				"bakllava",
+				"moondream",
+				"qwen2-vl",
+				"minicpm-v"
+			]
+		};
 		/** Form field the credential control stages under. */
 		const API_KEY_FIELD = "apiKey";
 		/** Bridges the `vision` scope and the credentials domain onto the card. */
@@ -555,7 +574,7 @@ window.__ModuleLoader__.load({
 				this.form = new CardForm(scope, [
 					selectField("channel", VISION_CHANNELS),
 					textField("baseUrl"),
-					selectField("model", VISION_MODELS)
+					textField("model")
 				], [{
 					field: API_KEY_FIELD,
 					write: (text) => this.writeKey(text)
@@ -567,6 +586,7 @@ window.__ModuleLoader__.load({
 				this.readCredential();
 			}
 			projection() {
+				const channel = this.form.field("channel").text || "gpt";
 				return {
 					...this.form.shell(),
 					channel: this.form.field("channel"),
@@ -574,7 +594,9 @@ window.__ModuleLoader__.load({
 					model: this.form.field("model"),
 					apiKey: this.form.field(API_KEY_FIELD),
 					apiKeyConfigured: this.credential.configured,
-					apiKeyWritable: this.credential.writable
+					apiKeyWritable: channel === "ollama" ? false : this.credential.writable,
+					modelOptions: VISION_MODEL_LISTS[channel] ?? VISION_MODEL_LISTS.gpt ?? [],
+					keyVisible: channel !== "ollama"
 				};
 			}
 			/**
@@ -658,15 +680,20 @@ window.__ModuleLoader__.load({
 		//#endregion
 		//#region lib/types/client/VisionCard.js
 		/** Visible labels for the channel options. */
-		const CHANNEL_OPTIONS = VISION_CHANNELS.map((value) => ({
-			value,
-			label: value
-		}));
-		/** Visible labels for the model options. */
-		const MODEL_OPTIONS = VISION_MODELS.map((value) => ({
-			value,
-			label: value
-		}));
+		const CHANNEL_OPTIONS = [
+			{
+				value: "gpt",
+				label: "GPT"
+			},
+			{
+				value: "zhipu",
+				label: "Zhipu GLM-4V"
+			},
+			{
+				value: "ollama",
+				label: "Ollama (local)"
+			}
+		];
 		/**
 		* Render the vision card.
 		* @param props - locale copy, the card snapshot, and its form actions.
@@ -676,6 +703,11 @@ window.__ModuleLoader__.load({
 			const { t } = props;
 			const state = props.useVisionCard((snapshot) => snapshot);
 			const disabled = !state.writable;
+			const modelOptions = state.modelOptions.map((value) => ({
+				value,
+				label: value
+			}));
+			const channelOptions = CHANNEL_OPTIONS.filter((option) => VISION_CHANNELS.includes(option.value));
 			return (0, react_jsx_runtime.jsxs)(PluginCard, {
 				t,
 				titleKey: "title",
@@ -684,7 +716,7 @@ window.__ModuleLoader__.load({
 				onSave: props.save,
 				onDiscard: props.discard,
 				children: [
-					(0, react_jsx_runtime.jsx)(SecretField, {
+					state.keyVisible ? (0, react_jsx_runtime.jsx)(SecretField, {
 						id: "plugin-config-vision-key",
 						label: t("apiKey"),
 						hint: t("apiKeyHint"),
@@ -695,7 +727,7 @@ window.__ModuleLoader__.load({
 						onEdit: (text) => {
 							props.edit("apiKey", text);
 						}
-					}),
+					}) : null,
 					(0, react_jsx_runtime.jsx)(ValueField, {
 						id: "plugin-config-vision-endpoint",
 						label: t("baseUrl"),
@@ -717,7 +749,7 @@ window.__ModuleLoader__.load({
 						id: "plugin-config-vision-channel",
 						label: t("channel"),
 						hint: t("channelHint"),
-						options: CHANNEL_OPTIONS,
+						options: channelOptions,
 						overriddenLabel: t("overridden"),
 						resetLabel: t("reset"),
 						invalidLabel: t("invalidNumber"),
@@ -734,7 +766,7 @@ window.__ModuleLoader__.load({
 						id: "plugin-config-vision-model",
 						label: t("model"),
 						hint: t("modelHint"),
-						options: MODEL_OPTIONS,
+						options: modelOptions,
 						overriddenLabel: t("overridden"),
 						resetLabel: t("reset"),
 						invalidLabel: t("invalidNumber"),
@@ -794,9 +826,9 @@ window.__ModuleLoader__.load({
 			baseUrl: "Endpoint",
 			baseUrlHint: "Domain and optional path prefix; /chat/completions is appended.",
 			channel: "Recognition channel",
-			channelHint: "Which external vision backend analyze_image dispatches to.",
+			channelHint: "Which backend analyze_image dispatches to: GPT (OpenAI-compatible), Zhipu GLM-4V, or a local Ollama model.",
 			model: "Model",
-			modelHint: "Which model the selected channel uses for recognition.",
+			modelHint: "Which model the selected channel uses for recognition (free text; the dropdown lists each channel's common models).",
 			overridden: "Overridden",
 			reset: "Reset to default",
 			readOnly: "This deployment stores settings read-only.",
@@ -820,9 +852,9 @@ window.__ModuleLoader__.load({
 			baseUrl: "接口地址",
 			baseUrlHint: "域名与可选路径前缀；会自动拼接 /chat/completions。",
 			channel: "识别通道",
-			channelHint: "analyze_image 派发到哪个外部视觉后端。",
+			channelHint: "analyze_image 派发到哪个后端：GPT（OpenAI 兼容）、智谱 GLM-4V 或本地 Ollama 模型。",
 			model: "模型",
-			modelHint: "当前通道识别时使用的模型。",
+			modelHint: "当前通道识别时使用的模型（可自由输入；下拉列出各通道常用模型）。",
 			overridden: "已覆盖",
 			reset: "恢复默认",
 			readOnly: "本部署的设置为只读。",

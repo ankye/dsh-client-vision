@@ -12,10 +12,20 @@ import { CardForm, selectField, textField, } from "./card-form.js";
 export const VISION_NS = 'vision';
 /** Credential reference the provider resolves when the section names none. */
 export const DEFAULT_API_KEY_REF = 'VISION_GPT_API_KEY';
+/** Channel assumed while the section carries none. */
+export const DEFAULT_CHANNEL = 'gpt';
 /** Recognition channels offered by the current host package. */
-export const VISION_CHANNELS = ['gpt'];
-/** Models offered by the `gpt` channel (aligned with the host's model list). */
-export const VISION_MODELS = ['gpt-5.5', 'gpt-5.6-sol', 'gpt-5.6-terra'];
+export const VISION_CHANNELS = ['gpt', 'zhipu', 'ollama'];
+/**
+ * Models offered per channel (aligned with the host package's model lists).
+ * The model control is free-text; these lists drive the dropdown options and
+ * switch with the selected channel.
+ */
+export const VISION_MODEL_LISTS = {
+    gpt: ['gpt-5.5', 'gpt-5.6-sol', 'gpt-5.6-terra'],
+    zhipu: ['glm-4v-plus', 'glm-4v-flash'],
+    ollama: ['llava', 'llava-llama3', 'bakllava', 'moondream', 'qwen2-vl', 'minicpm-v'],
+};
 /** Form field the credential control stages under. */
 const API_KEY_FIELD = 'apiKey';
 /** Bridges the `vision` scope and the credentials domain onto the card. */
@@ -32,12 +42,13 @@ export class VisionCardController {
     constructor(scope, api) {
         this.scope = scope;
         this.api = api;
-        this.form = new CardForm(scope, [selectField('channel', VISION_CHANNELS), textField('baseUrl'), selectField('model', VISION_MODELS)], [{ field: API_KEY_FIELD, write: text => this.writeKey(text) }]);
+        this.form = new CardForm(scope, [selectField('channel', VISION_CHANNELS), textField('baseUrl'), textField('model')], [{ field: API_KEY_FIELD, write: text => this.writeKey(text) }]);
         this.store = this.form.bind(() => this.projection());
         scope.subscribe(() => { void this.readCredential(); });
         void this.readCredential();
     }
     projection() {
+        const channel = this.form.field('channel').text || DEFAULT_CHANNEL;
         return {
             ...this.form.shell(),
             channel: this.form.field('channel'),
@@ -45,7 +56,9 @@ export class VisionCardController {
             model: this.form.field('model'),
             apiKey: this.form.field(API_KEY_FIELD),
             apiKeyConfigured: this.credential.configured,
-            apiKeyWritable: this.credential.writable,
+            apiKeyWritable: channel === 'ollama' ? false : this.credential.writable,
+            modelOptions: VISION_MODEL_LISTS[channel] ?? VISION_MODEL_LISTS.gpt ?? [],
+            keyVisible: channel !== 'ollama',
         };
     }
     /**
