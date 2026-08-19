@@ -9,9 +9,11 @@
  */
 import z from '@deepseek-ai/schemastery';
 import { createReadStream } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings';
-import { buildScreenshotCommand, listWindowsViaShell } from "./capture.js";
+import { buildScreenshotCommand, captureDependencyHint, currentPlatform, listWindowsViaShell } from "./capture.js";
 import { imageSizeOf, prepareImage } from "./image.js";
 import { channels } from "./channels/index.js";
 import { abortedError } from "./abort.js";
@@ -44,6 +46,8 @@ export function apply(ctx, config) {
     });
     let lastScreenshotPath;
     // Serve screenshot PNGs to the browser UI (the model context keeps text only).
+    // Screenshots live under the platform temp directory (os.tmpdir) so the
+    // route works on macOS, Windows and Linux alike.
     const webServer = ctx.get('webServer');
     if (webServer !== undefined) {
         webServer.register({
@@ -57,7 +61,7 @@ export function apply(ctx, config) {
                     res.end();
                     return;
                 }
-                const stream = createReadStream(`/tmp/${base}`);
+                const stream = createReadStream(join(tmpdir(), base));
                 stream.on('error', () => {
                     res.writeHead(404);
                     res.end();
@@ -79,7 +83,7 @@ export function apply(ctx, config) {
         description: 'Capture the screen and return a PNG path the recognition tool can read. '
             + 'mode=fullscreen captures the primary display; mode=window requires window_id from list_windows; '
             + 'mode=region captures a rectangle (x, y, width, height); mode=interactive asks the user to select a region. '
-            + 'macOS only; the first use may require Screen Recording permission.',
+            + 'Works on macOS (screencapture), Windows (PowerShell) and Linux (ImageMagick); on macOS the first use may require Screen Recording permission.',
         parameters: {
             mode: {
                 type: 'string',
@@ -110,7 +114,7 @@ export function apply(ctx, config) {
                 }],
         },
         async execute(args, exec) {
-            const path = `/tmp/dsh-vision-${Date.now()}.png`;
+            const path = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
             const command = buildScreenshotCommand(args, path);
             const result = await ctx.shell.run(ctx.shell.resolve({
                 command,
@@ -121,10 +125,13 @@ export function apply(ctx, config) {
                 throw abortedError();
             if (result.exitCode !== 0) {
                 const stderr = result.stderr.text.trim();
-                const hint = /permission|screen recording|could not create image/i.test(stderr)
-                    ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
-                    : '';
-                throw new Error(`screencapture failed (exit ${result.exitCode}): ${stderr || result.stdout.text.trim()}${hint}`);
+                const missing = /command not found|not recognized|not found/i.test(stderr);
+                const hint = missing
+                    ? captureDependencyHint(currentPlatform())
+                    : /permission|screen recording/i.test(stderr)
+                        ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+                        : '';
+                throw new Error(`screen capture failed (exit ${result.exitCode}): ${stderr || result.stdout.text.trim()}${hint}`);
             }
             const size = await imageSizeOf(ctx, path, exec.signal);
             lastScreenshotPath = path;
@@ -134,7 +141,7 @@ export function apply(ctx, config) {
     ctx.tools.register(defineTool({
         name: 'list_windows',
         description: 'List on-screen windows with their id, owning app, and title. '
-            + 'Use an id as window_id for take_screenshot mode=window. macOS only.',
+            + 'Use an id as window_id for take_screenshot mode=window (works on macOS, Windows and Linux X11).',
         parameters: {},
         output: {
             schema: {
@@ -259,7 +266,7 @@ export function apply(ctx, config) {
             }
             else {
                 source = 'screenshot';
-                path = `/tmp/dsh-vision-${Date.now()}.png`;
+                path = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
                 const shotArgs = { mode: args.mode ?? 'fullscreen' };
                 if (args.window_id !== undefined)
                     shotArgs.window_id = args.window_id;
@@ -280,10 +287,13 @@ export function apply(ctx, config) {
                     throw abortedError();
                 if (shot.exitCode !== 0) {
                     const stderr = shot.stderr.text.trim();
-                    const hint = /permission|screen recording|could not create image/i.test(stderr)
-                        ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
-                        : '';
-                    throw new Error(`screencapture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`);
+                    const missing = /command not found|not recognized|not found/i.test(stderr);
+                    const hint = missing
+                        ? captureDependencyHint(currentPlatform())
+                        : /permission|screen recording/i.test(stderr)
+                            ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+                            : '';
+                    throw new Error(`screen capture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`);
                 }
                 lastScreenshotPath = path;
             }

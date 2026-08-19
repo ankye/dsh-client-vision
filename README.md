@@ -21,9 +21,20 @@ Give your DeepSeek Harness agent **eyes**. `dsh-client-vision` is a screen-captu
 | Tool | What it does |
 |---|---|
 | `take_screenshot` | Capture the screen: `fullscreen` (primary display), `window` (by id from `list_windows`), `region` (x, y, width, height), or `interactive` (user selection). Returns the PNG path + dimensions. |
-| `list_windows` | Enumerate on-screen windows (`id`, `app`, `title`) via macOS `CGWindowList` — pick the browser or game window to capture. |
+| `list_windows` | Enumerate on-screen windows (`id`, `app`, `title`) — macOS `CGWindowList`, Windows `Get-Process` main handles, Linux X11 (`wmctrl`/`xprop`) — pick the browser or game window to capture. |
 | `analyze_image` | Submit an image (a path, or the most recent screenshot) to the configured vision channel and return a plain-text description. |
 | `view_image` | One-shot "look at this": capture the screen (or use `image_path`) and recognize it through the active channel. The screenshot is rendered as an image card in the Web conversation, while the model context receives only the plain-text description — the image bytes never enter the model context. |
+
+### Platforms
+
+| Platform | Capture backend | Window enumeration | Extra requirements |
+|---|---|---|---|
+| macOS | `screencapture` (system) | Swift `CGWindowList` | Screen Recording permission on first use |
+| Windows | PowerShell `System.Drawing` (system) | `Get-Process` main window handles | none |
+| Linux | ImageMagick `import` | `wmctrl` + `xprop` | X11 tooling: `imagemagick`, `wmctrl`, `x11-utils` |
+
+`mode=interactive` (system selection UI) is macOS-only; on Windows and Linux
+use `mode=region` with explicit coordinates.
 
 ### Settings (`vision` namespace)
 
