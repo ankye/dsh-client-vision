@@ -67,61 +67,72 @@ export const channels = {
 
 The tools (`take_screenshot` / `list_windows` / `analyze_image`) and their schemas never change.
 
-## Installation
+## Installation (official — no repo modification)
+
+`dsh plugin add` installs the packages into your profile; each package declares `dsh.bundle`, so the rows mount automatically — no patch rows, no repo edits.
 
 ### Prerequisites
 
-- A DeepSeek Harness deployment from the same lineage (`0.1.0-rc.7`).
-- macOS (capture is macOS-only; the rows disable themselves on other platforms).
+- Official DeepSeek Harness (`0.1.0-rc.7` lineage), `dsh` and `pnpm` on PATH.
 
-### Option A — Drop into the harness monorepo (team / fastest)
+### 1. Get the packages (pick one)
+
+**a. From this repository (recommended until published to npm):**
+
+```sh
+dsh plugin --profile web add \
+  file:/path/to/dsh-client-vision/packages/tool-vision \
+  file:/path/to/dsh-client-vision/packages/ui-vision
+```
+
+**b. Tarball:**
+
+```sh
+cd packages/tool-vision && npm pack
+cd packages/ui-vision   && npm pack
+dsh plugin --profile web add file:/path/to/deepseek-ai-dsh-tool-vision-0.1.0-rc.7.tgz \
+                            file:/path/to/deepseek-ai-dsh-client-ui-vision-0.1.0-rc.7.tgz
+```
+
+**c. npm registry (after publishing):**
+
+```sh
+dsh plugin --profile web add @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision
+```
+
+> A `[WARN] Issues with peer dependencies` message is expected and safe to ignore — the peers come from your deployment's own bundles at runtime.
+
+### 2. Verify
+
+```sh
+node -e "console.log(JSON.stringify(require(process.env.HOME + '/.dsh/profiles/web/package.json').dsh.profile.bundles))"
+# should list dsh-tool-vision and dsh-client-ui-vision
+```
+
+### 3. Restart + configure
+
+Restart the harness, then **Settings → Plugins → Plugin configuration → Vision**: set the endpoint, model, and your own API key (`VISION_GPT_API_KEY`), save.
+
+### 4. Verify
+
+Ask the agent to "look at the screen" — it should call `take_screenshot` → `analyze_image` and describe what it sees.
+
+### Uninstall
+
+```sh
+dsh plugin --profile web remove @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision
+```
+
+## Alternative: build inside a harness fork
+
+If you run a **fork** of deepseek-harness (not the official deployment), you can drop the packages into the monorepo instead:
 
 ```sh
 cp -R packages/tool-vision <harness>/packages/vision/tool-vision
 cp -R packages/ui-vision   <harness>/packages/client/ui-vision
 ```
 
-Then, inside the harness repo:
-
-1. Add `@deepseek-ai/dsh-tool-vision` and `@deepseek-ai/dsh-client-ui-vision` to `apps/cli/package.json` (`workspace:^`).
-2. Add `./packages/vision/tool-vision` to `tsconfig.host.json` and `./packages/client/ui-vision` to `tsconfig.client.json`.
-3. `pnpm install`, then build both packages:
-   ```sh
-   pnpm exec tsdown --env.DSH_BUILD_FACE host
-   pnpm exec tsdown --env.DSH_BUILD_FACE client
-   ```
-4. Mount + restart (below).
-
-### Option B — Publish to npm / a private registry (recommended for distribution)
-
-```sh
-cd packages/tool-vision && pnpm publish
-cd packages/ui-vision   && pnpm publish
-```
-
-Recipients: `dsh plugin --profile web add @deepseek-ai/dsh-tool-vision @deepseek-ai/dsh-client-ui-vision`, then mount + restart.
-
-### Option C — Tarball (small scale)
-
-```sh
-cd packages/tool-vision && npm pack    # deepseek-ai-dsh-tool-vision-0.1.0-rc.7.tgz
-cd packages/ui-vision   && npm pack    # deepseek-ai-dsh-client-ui-vision-0.1.0-rc.7.tgz
-```
-
-Recipients: `cd ~/.dsh/profiles/web && pnpm add file:/path/to/*.tgz`, then mount + restart.
-
-### Mount (all options)
-
-Add two rows to `~/.dsh/cordis.patch.yml` (the harness-home patch, applied to every profile), then restart:
-
-```yaml
-- insert:
-    - id: tool-vision
-      name: '@deepseek-ai/dsh-tool-vision'
-      disabled: !!js process.platform !== 'darwin'
-    - id: ui-vision
-      name: '@deepseek-ai/dsh-client-ui-vision'
-```
+Then add both to `apps/cli/package.json` (`workspace:^`), add `./packages/vision/tool-vision` to `tsconfig.host.json` and `./packages/client/ui-vision` to `tsconfig.client.json`, `pnpm install`, build (`tsdown` host + client passes), and restart.
 
 ## Quick start
 
