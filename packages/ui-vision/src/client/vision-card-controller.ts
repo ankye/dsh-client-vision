@@ -21,11 +21,22 @@ export const VISION_NS = 'vision'
 /** Credential reference the provider resolves when the section names none. */
 export const DEFAULT_API_KEY_REF = 'VISION_GPT_API_KEY'
 
-/** Recognition channels offered by the current host package. */
-export const VISION_CHANNELS = ['gpt'] as const
+/** Channel assumed while the section carries none. */
+export const DEFAULT_CHANNEL = 'gpt'
 
-/** Models offered by the `gpt` channel (aligned with the host's model list). */
-export const VISION_MODELS = ['gpt-5.5', 'gpt-5.6-sol', 'gpt-5.6-terra'] as const
+/** Recognition channels offered by the current host package. */
+export const VISION_CHANNELS = ['gpt', 'zhipu', 'ollama'] as const
+
+/**
+ * Models offered per channel (aligned with the host package's model lists).
+ * The model control is free-text; these lists drive the dropdown options and
+ * switch with the selected channel.
+ */
+export const VISION_MODEL_LISTS: Record<string, readonly string[]> = {
+  gpt: ['gpt-5.5', 'gpt-5.6-sol', 'gpt-5.6-terra'],
+  zhipu: ['glm-4v-plus', 'glm-4v-flash'],
+  ollama: ['llava', 'llava-llama3', 'bakllava', 'moondream', 'qwen2-vl', 'minicpm-v'],
+}
 
 /** Form field the credential control stages under. */
 const API_KEY_FIELD = 'apiKey'
@@ -66,6 +77,10 @@ export interface VisionCardState extends CardShell {
   apiKeyConfigured: boolean
   /** Whether the credentials domain accepts a write for it; false disables the control. */
   apiKeyWritable: boolean
+  /** Model options for the currently selected channel. */
+  modelOptions: readonly string[]
+  /** Whether the key control applies (false for keyless channels like ollama). */
+  keyVisible: boolean
 }
 
 /** The registration-side face the vision card's slot entry injects. */
@@ -92,7 +107,7 @@ export class VisionCardController {
   ) {
     this.form = new CardForm(
       scope,
-      [selectField('channel', VISION_CHANNELS), textField('baseUrl'), selectField('model', VISION_MODELS)],
+      [selectField('channel', VISION_CHANNELS), textField('baseUrl'), textField('model')],
       [{ field: API_KEY_FIELD, write: text => this.writeKey(text) }],
     )
     this.store = this.form.bind(() => this.projection())
@@ -101,6 +116,7 @@ export class VisionCardController {
   }
 
   private projection(): VisionCardState {
+    const channel = this.form.field('channel').text || DEFAULT_CHANNEL
     return {
       ...this.form.shell(),
       channel: this.form.field('channel'),
@@ -108,7 +124,9 @@ export class VisionCardController {
       model: this.form.field('model'),
       apiKey: this.form.field(API_KEY_FIELD),
       apiKeyConfigured: this.credential.configured,
-      apiKeyWritable: this.credential.writable,
+      apiKeyWritable: channel === 'ollama' ? false : this.credential.writable,
+      modelOptions: VISION_MODEL_LISTS[channel] ?? VISION_MODEL_LISTS.gpt ?? [],
+      keyVisible: channel !== 'ollama',
     }
   }
 

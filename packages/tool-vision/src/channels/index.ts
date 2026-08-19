@@ -6,11 +6,18 @@
  */
 
 import { gptAnalyze } from './gpt/index.ts'
+import { ollamaAnalyze } from './ollama/index.ts'
+import { zhipuAnalyze } from './zhipu/index.ts'
 import type { VisionChannel } from './types.ts'
 
 export type { VisionCall, VisionChannel } from './types.ts'
+export { OLLAMA_MODELS } from './ollama/index.ts'
+export { ZHIPU_MODELS } from './zhipu/index.ts'
+export { VISION_MODELS } from './gpt/index.ts'
 
 /** Registered recognition channels, keyed by the `vision.channel` setting. */
 export const channels: Record<string, VisionChannel> = {
   gpt: { label: 'GPT', analyze: gptAnalyze },
+  zhipu: { label: 'Zhipu GLM-4V', analyze: zhipuAnalyze },
+  ollama: { label: 'Ollama (local)', analyze: ollamaAnalyze },
 }

@@ -14,10 +14,16 @@ import { type CardActions, type CardFieldState, type CardShell } from './card-fo
 export declare const VISION_NS = "vision";
 /** Credential reference the provider resolves when the section names none. */
 export declare const DEFAULT_API_KEY_REF = "VISION_GPT_API_KEY";
+/** Channel assumed while the section carries none. */
+export declare const DEFAULT_CHANNEL = "gpt";
 /** Recognition channels offered by the current host package. */
-export declare const VISION_CHANNELS: readonly ["gpt"];
-/** Models offered by the `gpt` channel (aligned with the host's model list). */
-export declare const VISION_MODELS: readonly ["gpt-5.5", "gpt-5.6-sol", "gpt-5.6-terra"];
+export declare const VISION_CHANNELS: readonly ["gpt", "zhipu", "ollama"];
+/**
+ * Models offered per channel (aligned with the host package's model lists).
+ * The model control is free-text; these lists drive the dropdown options and
+ * switch with the selected channel.
+ */
+export declare const VISION_MODEL_LISTS: Record<string, readonly string[]>;
 /** The vision fields this card edits. */
 export interface VisionSettings {
     /** Active recognition channel. */
@@ -43,6 +49,10 @@ export interface VisionCardState extends CardShell {
     apiKeyConfigured: boolean;
     /** Whether the credentials domain accepts a write for it; false disables the control. */
     apiKeyWritable: boolean;
+    /** Model options for the currently selected channel. */
+    modelOptions: readonly string[];
+    /** Whether the key control applies (false for keyless channels like ollama). */
+    keyVisible: boolean;
 }
 /** The registration-side face the vision card's slot entry injects. */
 export interface VisionCardFace extends CardActions {

@@ -11,7 +11,7 @@ import type { InjectFace, PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-cli
 import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import { SecretField, SelectField, ValueField } from './fields.tsx'
 import { PluginCard } from './PluginCard.tsx'
-import { VISION_CHANNELS, VISION_MODELS, type VisionCardFace } from './vision-card-controller.ts'
+import { VISION_CHANNELS, type VisionCardFace } from './vision-card-controller.ts'
 
 /** Props the renderer binds for the vision card. */
 export type VisionCardProps =
@@ -20,10 +20,11 @@ export type VisionCardProps =
   & InjectFace<VisionCardFace>
 
 /** Visible labels for the channel options. */
-const CHANNEL_OPTIONS = VISION_CHANNELS.map(value => ({ value, label: value }))
-
-/** Visible labels for the model options. */
-const MODEL_OPTIONS = VISION_MODELS.map(value => ({ value, label: value }))
+const CHANNEL_OPTIONS = [
+  { value: 'gpt', label: 'GPT' },
+  { value: 'zhipu', label: 'Zhipu GLM-4V' },
+  { value: 'ollama', label: 'Ollama (local)' },
+] as const
 
 /**
  * Render the vision card.
@@ -34,6 +35,8 @@ export function VisionCard(props: VisionCardProps) {
   const { t } = props
   const state = props.useVisionCard(snapshot => snapshot)
   const disabled = !state.writable
+  const modelOptions = state.modelOptions.map(value => ({ value, label: value }))
+  const channelOptions = CHANNEL_OPTIONS.filter(option => VISION_CHANNELS.includes(option.value as never))
   return (
     <PluginCard
       t={t}
@@ -43,16 +46,20 @@ export function VisionCard(props: VisionCardProps) {
       onSave={props.save}
       onDiscard={props.discard}
     >
-      <SecretField
-        id="plugin-config-vision-key"
-        label={t('apiKey')}
-        hint={t('apiKeyHint')}
-        disabled={!state.apiKeyWritable}
-        text={state.apiKey.text}
-        configured={state.apiKeyConfigured}
-        stateLabel={state.apiKeyConfigured ? t('apiKeySet') : t('apiKeyUnset')}
-        onEdit={(text) => { props.edit('apiKey', text) }}
-      />
+      {state.keyVisible
+        ? (
+          <SecretField
+            id="plugin-config-vision-key"
+            label={t('apiKey')}
+            hint={t('apiKeyHint')}
+            disabled={!state.apiKeyWritable}
+            text={state.apiKey.text}
+            configured={state.apiKeyConfigured}
+            stateLabel={state.apiKeyConfigured ? t('apiKeySet') : t('apiKeyUnset')}
+            onEdit={(text) => { props.edit('apiKey', text) }}
+          />
+        )
+        : null}
       <ValueField
         id="plugin-config-vision-endpoint"
         label={t('baseUrl')}
@@ -70,7 +77,7 @@ export function VisionCard(props: VisionCardProps) {
         id="plugin-config-vision-channel"
         label={t('channel')}
         hint={t('channelHint')}
-        options={CHANNEL_OPTIONS}
+        options={channelOptions}
         overriddenLabel={t('overridden')}
         resetLabel={t('reset')}
         invalidLabel={t('invalidNumber')}
@@ -83,7 +90,7 @@ export function VisionCard(props: VisionCardProps) {
         id="plugin-config-vision-model"
         label={t('model')}
         hint={t('modelHint')}
-        options={MODEL_OPTIONS}
+        options={modelOptions}
         overriddenLabel={t('overridden')}
         resetLabel={t('reset')}
         invalidLabel={t('invalidNumber')}

@@ -6,6 +6,9 @@
  */
 import type { VisionChannel } from './types.ts';
 export type { VisionCall, VisionChannel } from './types.ts';
+export { OLLAMA_MODELS } from './ollama/index.ts';
+export { ZHIPU_MODELS } from './zhipu/index.ts';
+export { VISION_MODELS } from './gpt/index.ts';
 /** Registered recognition channels, keyed by the `vision.channel` setting. */
 export declare const channels: Record<string, VisionChannel>;
 //# sourceMappingURL=index.d.ts.map
