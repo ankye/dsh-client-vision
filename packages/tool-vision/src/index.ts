@@ -15,6 +15,8 @@ import type {} from '@deepseek-ai/dsh-fs'
 import type {} from '@deepseek-ai/dsh-session'
 import type {} from '@deepseek-ai/dsh-shell'
 import type {} from '@deepseek-ai/dsh-system-prompt'
+import { createReadStream } from 'node:fs'
+import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
 import { buildScreenshotCommand, listWindowsViaShell, type ScreenshotArgs, type WindowEntry } from './capture.ts'
@@ -60,6 +62,20 @@ interface AnalyzeImageArgs {
   prompt?: string
 }
 
+/** The `view_image` tool's arguments. */
+interface ViewImageArgs {
+  /** Image to describe; omitted to capture the screen instead. */
+  image_path?: string
+  /** Capture mode when `image_path` is omitted (default fullscreen). */
+  mode?: 'fullscreen' | 'window' | 'region' | 'interactive'
+  window_id?: number
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  prompt?: string
+}
+
 /** Default instruction when the model passes none. */
 const DEFAULT_PROMPT = 'Describe the image in detail, in the language of the conversation.'
 
@@ -76,6 +92,31 @@ export function apply(ctx: Context, config: VisionConfig): void {
   })
 
   let lastScreenshotPath: string | undefined
+
+  // Serve screenshot PNGs to the browser UI (the model context keeps text only).
+  const webServer = ctx.get('webServer')
+  if (webServer !== undefined) {
+    webServer.register({
+      kind: 'prefix',
+      path: '/dsh-vision',
+      handler: (req: IncomingMessage, res: ServerResponse) => {
+        const pathname = new URL(req.url ?? '/', 'http://x').pathname
+        const base = pathname.split('/').pop() ?? ''
+        if (!/^[A-Za-z0-9._-]+$/.test(base)) {
+          res.writeHead(404)
+          res.end()
+          return
+        }
+        const stream = createReadStream(`/tmp/${base}`)
+        stream.on('error', () => {
+          res.writeHead(404)
+          res.end()
+        })
+        res.writeHead(200, { 'content-type': 'image/png' })
+        stream.pipe(res)
+      },
+    })
+  }
 
   ctx.systemPrompt.section({
     name: 'tool:vision',
@@ -214,6 +255,94 @@ export function apply(ctx: Context, config: VisionConfig): void {
         signal: exec.signal,
       })
       return { channel: cfg.channel, model: cfg.model, description }
+    },
+  }))
+
+  ctx.tools.register(defineTool({
+    name: 'view_image',
+    description: 'One-shot "look at this": capture the screen (or use image_path) and return the external vision channel\'s '
+      + 'plain-text description. A convenience fusion of take_screenshot + analyze_image. The result is text only — the model '
+      + 'cannot see the image directly.',
+    parameters: {
+      image_path: { type: 'string', description: 'Path to a PNG/JPEG file. Omit to capture the screen instead.' },
+      mode: {
+        type: 'string',
+        enum: ['fullscreen', 'window', 'region', 'interactive'],
+        description: 'Capture mode when image_path is omitted (default fullscreen).',
+      },
+      window_id: { type: 'number', description: 'Required for mode=window; a window id from list_windows.' },
+      x: { type: 'number', description: 'Region left edge in screen points (mode=region).' },
+      y: { type: 'number', description: 'Region top edge in screen points (mode=region).' },
+      width: { type: 'number', description: 'Region width in screen points (mode=region).' },
+      height: { type: 'number', description: 'Region height in screen points (mode=region).' },
+      prompt: { type: 'string', description: 'Instruction for the vision model; defaults to a general description.' },
+    },
+    output: {
+      schema: {
+        type: 'object',
+        additionalProperties: false,
+        properties: {
+          source: { type: 'string', required: true },
+          path: { type: 'string', required: true },
+          channel: { type: 'string', required: true },
+          model: { type: 'string', required: true },
+          description: { type: 'string', required: true },
+        },
+      },
+      render: (_args, value) => [{
+        type: 'text',
+        text: value.source === 'screenshot'
+          ? `${value.description}\n[view-image: /dsh-vision/${value.path.split('/').pop()}]`
+          : value.description,
+      }],
+    },
+    async execute(args: ViewImageArgs, exec: ToolRunContext) {
+      const cfg = current()
+      if (!cfg.enabled) {
+        throw new Error('vision is disabled (settings vision.enabled is false); enable it in Settings → Plugins → Vision')
+      }
+      const channel = channels[cfg.channel]
+      if (channel === undefined) {
+        throw new Error(`unknown vision channel "${cfg.channel}"; registered: ${Object.keys(channels).join(', ')}`)
+      }
+      let path: string
+      let source: 'image' | 'screenshot'
+      if (args.image_path !== undefined) {
+        source = 'image'
+        path = args.image_path
+      } else {
+        source = 'screenshot'
+        path = `/tmp/dsh-vision-${Date.now()}.png`
+        const shotArgs: ScreenshotArgs = { mode: args.mode ?? 'fullscreen' }
+        if (args.window_id !== undefined) shotArgs.window_id = args.window_id
+        if (args.x !== undefined) shotArgs.x = args.x
+        if (args.y !== undefined) shotArgs.y = args.y
+        if (args.width !== undefined) shotArgs.width = args.width
+        if (args.height !== undefined) shotArgs.height = args.height
+        const shot = await ctx.shell.run(ctx.shell.resolve({
+          command: buildScreenshotCommand(shotArgs, path),
+          timeoutMs: 90000,
+          signal: exec.signal,
+        }))
+        if (shot.aborted) throw abortedError()
+        if (shot.exitCode !== 0) {
+          const stderr = shot.stderr.text.trim()
+          const hint = /permission|screen recording|could not create image/i.test(stderr)
+            ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+            : ''
+          throw new Error(`screencapture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`)
+        }
+        lastScreenshotPath = path
+      }
+      const prepared = await prepareImage(ctx, path, exec.agent?.session.header.cwd, exec.signal)
+      const description = await channel.analyze(ctx, {
+        imageB64: prepared.base64,
+        mime: prepared.mime,
+        prompt: args.prompt ?? DEFAULT_PROMPT,
+        config: cfg,
+        signal: exec.signal,
+      })
+      return { source, path, channel: cfg.channel, model: cfg.model, description }
     },
   }))
 }

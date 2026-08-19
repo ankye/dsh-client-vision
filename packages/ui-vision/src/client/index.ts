@@ -20,7 +20,10 @@ import type {} from '@deepseek-ai/dsh-client-ui-settings-plugins/client'
 import type { ClientContext } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: the ctx.remote Context merge and the forwarded-event key face.
 import type {} from '@deepseek-ai/dsh-api-remotes/client'
+// Type-only: the tool.call.toolview slot declaration (ui-tool).
+import type {} from '@deepseek-ai/dsh-client-ui-tool/client'
 import { VisionCard } from './VisionCard.tsx'
+import { ViewImageToolView } from './ViewImageToolView.tsx'
 import { VISION_NS, VisionCardController } from './vision-card-controller.ts'
 import { en, zh } from './locales.ts'
 
@@ -44,6 +47,12 @@ export function apply(ctx: ClientContext): void {
     () => ctx.remote.$on('credentials/updated', (ref) => { vision.refreshCredential(ref) }),
     'ui-vision: credential invalidations',
   )
+
+  ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
+    name: 'tool.call.toolview',
+    key: 'view_image',
+    locale: VISION_NS,
+  }, ViewImageToolView))
 
   ctx.slots.inject('settings.plugin.item', () => ctx.slots.register({
     name: 'settings.plugin.item',

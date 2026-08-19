@@ -19,17 +19,17 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var fields_module_css_default = {
-			"inputInvalid": "t7dRiq_inputInvalid",
-			"head": "t7dRiq_head",
-			"input": "t7dRiq_input",
-			"hint": "t7dRiq_hint",
+			"badge": "t7dRiq_badge",
 			"invalid": "t7dRiq_invalid",
 			"label": "t7dRiq_label",
+			"inputInvalid": "t7dRiq_inputInvalid",
+			"hint": "t7dRiq_hint",
+			"input": "t7dRiq_input",
+			"field": "t7dRiq_field",
 			"badgeMuted": "t7dRiq_badgeMuted",
 			"badges": "t7dRiq_badges",
-			"badge": "t7dRiq_badge",
-			"reset": "t7dRiq_reset",
-			"field": "t7dRiq_field"
+			"head": "t7dRiq_head",
+			"reset": "t7dRiq_reset"
 		};
 		//#endregion
 		//#region lib/types/client/fields.js
@@ -197,21 +197,21 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var PluginCard_module_css_default = {
-			"footer": "xS_YIG_footer",
-			"readOnly": "xS_YIG_readOnly",
-			"discard": "xS_YIG_discard",
 			"headText": "xS_YIG_headText",
-			"chevron": "xS_YIG_chevron",
-			"body": "xS_YIG_body",
-			"card": "xS_YIG_card",
-			"header": "xS_YIG_header",
-			"pending": "xS_YIG_pending",
-			"save": "xS_YIG_save",
-			"name": "xS_YIG_name",
 			"cardOpen": "xS_YIG_cardOpen",
-			"chevronOpen": "xS_YIG_chevronOpen",
+			"name": "xS_YIG_name",
+			"discard": "xS_YIG_discard",
+			"save": "xS_YIG_save",
+			"header": "xS_YIG_header",
 			"failed": "xS_YIG_failed",
-			"description": "xS_YIG_description"
+			"chevron": "xS_YIG_chevron",
+			"pending": "xS_YIG_pending",
+			"card": "xS_YIG_card",
+			"chevronOpen": "xS_YIG_chevronOpen",
+			"description": "xS_YIG_description",
+			"body": "xS_YIG_body",
+			"readOnly": "xS_YIG_readOnly",
+			"footer": "xS_YIG_footer"
 		};
 		//#endregion
 		//#region lib/types/client/PluginCard.js
@@ -751,6 +751,36 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
+		//#region lib/types/client/ViewImageToolView.js
+		/** Marker line the host render emits for screenshot results. */
+		const SHOT_MARKER = /\[view-image: ([^\]]+)\]/;
+		/**
+		* Render the view_image call card.
+		* @param props - the tool call block and locale.
+		* @returns the image + description, or plain text when no screenshot marker.
+		*/
+		function ViewImageToolView(props) {
+			const block = props.block;
+			if (!("kind" in block) || block.kind !== "tool-result") return null;
+			const text = block.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
+			const match = SHOT_MARKER.exec(text);
+			if (match === null) return (0, react_jsx_runtime.jsx)("pre", {
+				style: { whiteSpace: "pre-wrap" },
+				children: text
+			});
+			const url = match[1];
+			const description = text.replace(SHOT_MARKER, "").trim();
+			return (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("img", {
+				src: url,
+				alt: "view-image",
+				style: {
+					maxWidth: "100%",
+					borderRadius: 8,
+					display: "block"
+				}
+			}), description !== "" ? (0, react_jsx_runtime.jsx)("p", { children: description }) : null] });
+		}
+		//#endregion
 		//#region lib/types/client/locales.js
 		/** Locale bundles for the vision settings card (its own namespace). */
 		/** English copy. */
@@ -839,6 +869,11 @@ window.__ModuleLoader__.load({
 			ctx.effect(() => ctx.remote.$on("credentials/updated", (ref) => {
 				vision.refreshCredential(ref);
 			}), "ui-vision: credential invalidations");
+			ctx.slots.inject("tool.call.toolview", () => ctx.slots.register({
+				name: "tool.call.toolview",
+				key: "view_image",
+				locale: VISION_NS
+			}, ViewImageToolView));
 			ctx.slots.inject("settings.plugin.item", () => ctx.slots.register({
 				name: "settings.plugin.item",
 				key: VISION_NS,

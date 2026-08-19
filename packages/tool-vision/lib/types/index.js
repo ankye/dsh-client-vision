@@ -1,0 +1,303 @@
+/**
+ * Model-facing screen capture and external image-recognition tools.
+ *
+ * The tool entry points are decoupled from the recognition backend: a channel
+ * registry maps the `vision.channel` setting to one `analyze()` implementation.
+ * Adding a backend (Claude, Gemini, a local model) is one registry entry plus a
+ * settings segment, with no tool-schema change.
+ * @module @deepseek-ai/dsh-tool-vision
+ */
+import z from '@deepseek-ai/schemastery';
+import { createReadStream } from 'node:fs';
+import { defineTool } from '@deepseek-ai/dsh-tools';
+import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings';
+import { buildScreenshotCommand, listWindowsViaShell } from "./capture.js";
+import { imageSizeOf, prepareImage } from "./image.js";
+import { channels } from "./channels/index.js";
+import { abortedError } from "./abort.js";
+/** Cordis plugin name used by loader diagnostics. */
+export const name = 'tool-vision';
+/** Services this plugin consumes (all host-plane; it publishes nothing). */
+export const inject = ['tools', 'shell', 'fs', 'systemPrompt'];
+/** Settings namespace carrying the vision configuration. */
+export const VISION_SETTINGS_NAMESPACE = settingsNamespace('vision');
+/** Runtime configuration schema for the vision plugin. */
+export const Config = z.object({
+    channel: z.string().default('gpt'),
+    enabled: z.boolean().default(true),
+    baseUrl: z.string(),
+    model: z.string().default('gpt-5.6-terra'),
+    apiKeyEnv: z.string().role('credential-ref').default('VISION_GPT_API_KEY'),
+});
+/** Default instruction when the model passes none. */
+const DEFAULT_PROMPT = 'Describe the image in detail, in the language of the conversation.';
+/**
+ * Mount the vision tools and settings section.
+ * @param ctx - plugin context.
+ * @param config - the composed row config (schema-defaulted by Cordis).
+ */
+export function apply(ctx, config) {
+    let current = () => config;
+    installSettingsSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
+        setSource: (source) => { current = source; },
+        onChange: () => { },
+    });
+    let lastScreenshotPath;
+    // Serve screenshot PNGs to the browser UI (the model context keeps text only).
+    const webServer = ctx.get('webServer');
+    if (webServer !== undefined) {
+        webServer.register({
+            kind: 'prefix',
+            path: '/dsh-vision',
+            handler: (req, res) => {
+                const pathname = new URL(req.url ?? '/', 'http://x').pathname;
+                const base = pathname.split('/').pop() ?? '';
+                if (!/^[A-Za-z0-9._-]+$/.test(base)) {
+                    res.writeHead(404);
+                    res.end();
+                    return;
+                }
+                const stream = createReadStream(`/tmp/${base}`);
+                stream.on('error', () => {
+                    res.writeHead(404);
+                    res.end();
+                });
+                res.writeHead(200, { 'content-type': 'image/png' });
+                stream.pipe(res);
+            },
+        });
+    }
+    ctx.systemPrompt.section({
+        name: 'tool:vision',
+        order: 120,
+        text: 'To inspect what is on screen, call take_screenshot (fullscreen/window/region/interactive), '
+            + 'then analyze_image on the returned path. analyze_image returns only text: the configured '
+            + 'external vision channel describes the image; the model itself cannot see it.',
+    });
+    ctx.tools.register(defineTool({
+        name: 'take_screenshot',
+        description: 'Capture the screen and return a PNG path the recognition tool can read. '
+            + 'mode=fullscreen captures the primary display; mode=window requires window_id from list_windows; '
+            + 'mode=region captures a rectangle (x, y, width, height); mode=interactive asks the user to select a region. '
+            + 'macOS only; the first use may require Screen Recording permission.',
+        parameters: {
+            mode: {
+                type: 'string',
+                required: true,
+                enum: ['fullscreen', 'window', 'region', 'interactive'],
+                description: 'What to capture: fullscreen, an existing window, a rectangle region, or an interactive user selection.',
+            },
+            window_id: { type: 'number', description: 'Required for mode=window; a window id from list_windows.' },
+            x: { type: 'number', description: 'Region left edge in screen points (mode=region).' },
+            y: { type: 'number', description: 'Region top edge in screen points (mode=region).' },
+            width: { type: 'number', description: 'Region width in screen points (mode=region).' },
+            height: { type: 'number', description: 'Region height in screen points (mode=region).' },
+        },
+        output: {
+            schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                    path: { type: 'string', required: true },
+                    width: { type: 'number', required: true },
+                    height: { type: 'number', required: true },
+                    mode: { type: 'string', required: true },
+                },
+            },
+            render: (_args, value) => [{
+                    type: 'text',
+                    text: `Captured ${value.mode} screenshot: ${value.path} (${value.width}x${value.height})`,
+                }],
+        },
+        async execute(args, exec) {
+            const path = `/tmp/dsh-vision-${Date.now()}.png`;
+            const command = buildScreenshotCommand(args, path);
+            const result = await ctx.shell.run(ctx.shell.resolve({
+                command,
+                timeoutMs: 90000,
+                signal: exec.signal,
+            }));
+            if (result.aborted)
+                throw abortedError();
+            if (result.exitCode !== 0) {
+                const stderr = result.stderr.text.trim();
+                const hint = /permission|screen recording|could not create image/i.test(stderr)
+                    ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+                    : '';
+                throw new Error(`screencapture failed (exit ${result.exitCode}): ${stderr || result.stdout.text.trim()}${hint}`);
+            }
+            const size = await imageSizeOf(ctx, path, exec.signal);
+            lastScreenshotPath = path;
+            return { path, width: size.width, height: size.height, mode: args.mode };
+        },
+    }));
+    ctx.tools.register(defineTool({
+        name: 'list_windows',
+        description: 'List on-screen windows with their id, owning app, and title. '
+            + 'Use an id as window_id for take_screenshot mode=window. macOS only.',
+        parameters: {},
+        output: {
+            schema: {
+                type: 'array',
+                items: {
+                    type: 'object',
+                    additionalProperties: false,
+                    properties: {
+                        id: { type: 'number', required: true },
+                        app: { type: 'string', required: true },
+                        title: { type: 'string', required: true },
+                    },
+                },
+            },
+            render: (_args, value) => [{
+                    type: 'text',
+                    text: value.map(w => `${w.id}\t${w.app}\t${w.title}`).join('\n') || '(no windows)',
+                }],
+        },
+        async execute(_args, exec) {
+            return listWindowsViaShell(ctx, exec.signal);
+        },
+    }));
+    ctx.tools.register(defineTool({
+        name: 'analyze_image',
+        description: 'Submit an image to the configured external vision channel and return a plain-text description. '
+            + 'Pass image_path, or omit it to use the most recent take_screenshot result. The result is text only — the model cannot see the image directly. '
+            + 'Unlike read_image (which feeds the current session model), analyze_image uses the vision settings (Settings → Plugins → Vision).',
+        parameters: {
+            image_path: { type: 'string', description: 'Path to a PNG/JPEG file. Omit to use the most recent take_screenshot result.' },
+            prompt: { type: 'string', description: 'Instruction for the vision model; defaults to a general description.' },
+        },
+        output: {
+            schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                    channel: { type: 'string', required: true },
+                    model: { type: 'string', required: true },
+                    description: { type: 'string', required: true },
+                },
+            },
+            render: (_args, value) => [{ type: 'text', text: value.description }],
+        },
+        async execute(args, exec) {
+            const cfg = current();
+            if (!cfg.enabled) {
+                throw new Error('vision is disabled (settings vision.enabled is false); enable it in Settings → Plugins → Vision');
+            }
+            const channel = channels[cfg.channel];
+            if (channel === undefined) {
+                throw new Error(`unknown vision channel "${cfg.channel}"; registered: ${Object.keys(channels).join(', ')}`);
+            }
+            const imagePath = args.image_path ?? lastScreenshotPath;
+            if (imagePath === undefined) {
+                throw new Error('no image: pass image_path or call take_screenshot first');
+            }
+            const prepared = await prepareImage(ctx, imagePath, exec.agent?.session.header.cwd, exec.signal);
+            const prompt = args.prompt ?? DEFAULT_PROMPT;
+            const description = await channel.analyze(ctx, {
+                imageB64: prepared.base64,
+                mime: prepared.mime,
+                prompt,
+                config: cfg,
+                signal: exec.signal,
+            });
+            return { channel: cfg.channel, model: cfg.model, description };
+        },
+    }));
+    ctx.tools.register(defineTool({
+        name: 'view_image',
+        description: 'One-shot "look at this": capture the screen (or use image_path) and return the external vision channel\'s '
+            + 'plain-text description. A convenience fusion of take_screenshot + analyze_image. The result is text only — the model '
+            + 'cannot see the image directly.',
+        parameters: {
+            image_path: { type: 'string', description: 'Path to a PNG/JPEG file. Omit to capture the screen instead.' },
+            mode: {
+                type: 'string',
+                enum: ['fullscreen', 'window', 'region', 'interactive'],
+                description: 'Capture mode when image_path is omitted (default fullscreen).',
+            },
+            window_id: { type: 'number', description: 'Required for mode=window; a window id from list_windows.' },
+            x: { type: 'number', description: 'Region left edge in screen points (mode=region).' },
+            y: { type: 'number', description: 'Region top edge in screen points (mode=region).' },
+            width: { type: 'number', description: 'Region width in screen points (mode=region).' },
+            height: { type: 'number', description: 'Region height in screen points (mode=region).' },
+            prompt: { type: 'string', description: 'Instruction for the vision model; defaults to a general description.' },
+        },
+        output: {
+            schema: {
+                type: 'object',
+                additionalProperties: false,
+                properties: {
+                    source: { type: 'string', required: true },
+                    path: { type: 'string', required: true },
+                    channel: { type: 'string', required: true },
+                    model: { type: 'string', required: true },
+                    description: { type: 'string', required: true },
+                },
+            },
+            render: (_args, value) => [{
+                    type: 'text',
+                    text: value.source === 'screenshot'
+                        ? `${value.description}\n[view-image: /dsh-vision/${value.path.split('/').pop()}]`
+                        : value.description,
+                }],
+        },
+        async execute(args, exec) {
+            const cfg = current();
+            if (!cfg.enabled) {
+                throw new Error('vision is disabled (settings vision.enabled is false); enable it in Settings → Plugins → Vision');
+            }
+            const channel = channels[cfg.channel];
+            if (channel === undefined) {
+                throw new Error(`unknown vision channel "${cfg.channel}"; registered: ${Object.keys(channels).join(', ')}`);
+            }
+            let path;
+            let source;
+            if (args.image_path !== undefined) {
+                source = 'image';
+                path = args.image_path;
+            }
+            else {
+                source = 'screenshot';
+                path = `/tmp/dsh-vision-${Date.now()}.png`;
+                const shotArgs = { mode: args.mode ?? 'fullscreen' };
+                if (args.window_id !== undefined)
+                    shotArgs.window_id = args.window_id;
+                if (args.x !== undefined)
+                    shotArgs.x = args.x;
+                if (args.y !== undefined)
+                    shotArgs.y = args.y;
+                if (args.width !== undefined)
+                    shotArgs.width = args.width;
+                if (args.height !== undefined)
+                    shotArgs.height = args.height;
+                const shot = await ctx.shell.run(ctx.shell.resolve({
+                    command: buildScreenshotCommand(shotArgs, path),
+                    timeoutMs: 90000,
+                    signal: exec.signal,
+                }));
+                if (shot.aborted)
+                    throw abortedError();
+                if (shot.exitCode !== 0) {
+                    const stderr = shot.stderr.text.trim();
+                    const hint = /permission|screen recording|could not create image/i.test(stderr)
+                        ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+                        : '';
+                    throw new Error(`screencapture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`);
+                }
+                lastScreenshotPath = path;
+            }
+            const prepared = await prepareImage(ctx, path, exec.agent?.session.header.cwd, exec.signal);
+            const description = await channel.analyze(ctx, {
+                imageB64: prepared.base64,
+                mime: prepared.mime,
+                prompt: args.prompt ?? DEFAULT_PROMPT,
+                config: cfg,
+                signal: exec.signal,
+            });
+            return { source, path, channel: cfg.channel, model: cfg.model, description };
+        },
+    }));
+}
+export { VISION_MODELS } from "./channels/gpt/index.js";
+//# sourceMappingURL=index.js.map
