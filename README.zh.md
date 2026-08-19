@@ -23,6 +23,7 @@
 | `take_screenshot` | 截图：`fullscreen`（主屏）/ `window`（配合 `list_windows` 的 id）/ `region`（x, y, w, h）/ `interactive`（用户框选）。返回 PNG 路径 + 尺寸。 |
 | `list_windows` | 枚举屏幕窗口（`id` / `app` / `title`，基于 macOS `CGWindowList`）——选浏览器或游戏窗口来截。 |
 | `analyze_image` | 把图片（指定路径，或最近一次截图）交给当前配置的视觉通道，返回纯文本描述。 |
+| `view_image` | 一步「看一下」：截屏（或传入 `image_path`）并经活动通道识别。截图会在 Web 对话中渲染为图片卡片，而模型上下文只拿到文字描述——图片字节从不进入模型上下文。 |
 
 ### 设置（`vision` 命名空间）
 
