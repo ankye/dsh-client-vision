@@ -20,7 +20,7 @@ Give your DeepSeek Harness agent **eyes**. `dsh-client-vision` is a screen-captu
 
 | Tool | What it does |
 |---|---|
-| `take_screenshot` | Capture the screen: `fullscreen` (primary display), `window` (by id from `list_windows`), `region` (x, y, width, height), or `interactive` (user selection). Returns the PNG path + dimensions. |
+| `take_screenshot` | Capture the screen: `fullscreen` (primary display), `window` (by id from `list_windows`), `region` (x, y, width, height), `interactive` (user selection), `android` (adb device/emulator), or `ios` (booted simulator). Returns the PNG path + dimensions. |
 | `list_windows` | Enumerate on-screen windows (`id`, `app`, `title`) — macOS `CGWindowList`, Windows `Get-Process` main handles, Linux X11 (`wmctrl`/`xprop`) — pick the browser or game window to capture. |
 | `analyze_image` | Submit an image (a path, or the most recent screenshot) to the configured vision channel and return a plain-text description. |
 | `view_image` | One-shot "look at this": capture the screen (or use `image_path`) and recognize it through the active channel. The screenshot is rendered as an image card in the Web conversation, while the model context receives only the plain-text description — the image bytes never enter the model context. |
@@ -35,6 +35,13 @@ Give your DeepSeek Harness agent **eyes**. `dsh-client-vision` is a screen-captu
 
 `mode=interactive` (system selection UI) is macOS-only; on Windows and Linux
 use `mode=region` with explicit coordinates.
+
+### Device capture
+
+| Mode | What it captures | Requirements |
+|---|---|---|
+| `android` | A connected Android device or emulator screen | `adb` on PATH with a device online (`adb devices`); works from any host. With several devices online, pass `device=<serial>`. |
+| `ios` | The booted iOS simulator | macOS host with Xcode (`xcrun simctl`) |
 
 ### Settings (`vision` namespace)
 

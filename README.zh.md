@@ -20,7 +20,7 @@
 
 | 工具 | 作用 |
 |---|---|
-| `take_screenshot` | 截图：`fullscreen`（主屏）/ `window`（配合 `list_windows` 的 id）/ `region`（x, y, w, h）/ `interactive`（用户框选）。返回 PNG 路径 + 尺寸。 |
+| `take_screenshot` | 截图：`fullscreen`（主屏）/ `window`（配合 `list_windows` 的 id）/ `region`（x, y, w, h）/ `interactive`（用户框选）/ `android`（adb 设备或模拟器）/ `ios`（已启动的模拟器）。返回 PNG 路径 + 尺寸。 |
 | `list_windows` | 枚举屏幕上的窗口（`id`、`app`、`title`）——macOS `CGWindowList`、Windows `Get-Process` 主窗口句柄、Linux X11（`wmctrl`/`xprop`），挑出要截的浏览器或游戏窗口。 |
 | `analyze_image` | 把图片（指定路径，或最近一次截图）交给当前配置的视觉通道，返回纯文本描述。 |
 | `view_image` | 一步「看一下」：截屏（或传入 `image_path`）并经活动通道识别。截图会在 Web 对话中渲染为图片卡片，而模型上下文只拿到文字描述——图片字节从不进入模型上下文。 |
@@ -34,6 +34,13 @@
 | Linux | ImageMagick `import` | `wmctrl` + `xprop` | ImageMagick（`convert`/`identify`）、`wmctrl`、`x11-utils` |
 
 `interactive` 手动框选只支持 macOS；Windows 和 Linux 请使用带坐标的 `region`。
+
+### 设备截图
+
+| 模式 | 截什么 | 要求 |
+|---|---|---|
+| `android` | 已连接的 Android 设备或模拟器屏幕 | PATH 里有 `adb` 且 `adb devices` 有在线设备；任意宿主系统可用。多个设备在线时传 `device=<serial>` |
+| `ios` | 已启动的 iOS 模拟器 | macOS 宿主 + Xcode（`xcrun simctl`） |
 
 ### 设置（`vision` 命名空间）
 

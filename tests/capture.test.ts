@@ -6,7 +6,7 @@
 
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
-import { buildScreenshotCommand, currentPlatform, listWindowsViaShell, shellOutputPath } from '../packages/tool-vision/src/capture.ts'
+import { buildScreenshotCommand, currentPlatform, deviceCaptureHint, listWindowsViaShell, shellOutputPath } from '../packages/tool-vision/src/capture.ts'
 
 const OUT = '/tmp/shot.png'
 
@@ -136,6 +136,57 @@ test('window list output parses tab-separated entries', async () => {
     { id: 132074, app: 'ApplicationFrameHost', title: '设置' },
     { id: 68012, app: 'cc-switch', title: 'CC Switch' },
   ])
+})
+
+// ---------- device capture (android / ios) ----------
+
+test('android on win32 pulls into the confined temp and echoes the path', () => {
+  const cmd = buildScreenshotCommand({ mode: 'android' }, 'C:\\shots\\a.png', 'win32')
+  assert.match(cmd, /adb shell screencap -p \/sdcard\/dsh-vision-screen\.png/)
+  assert.match(cmd, /if \(\$LASTEXITCODE -ne 0\) \{ exit \$LASTEXITCODE \}/)
+  assert.match(cmd, /adb pull \/sdcard\/dsh-vision-screen\.png \$p/)
+  assert.match(cmd, /Join-Path \$env:TEMP 'a\.png'/)
+  assert.match(cmd, /Write-Output \$p$/)
+})
+
+test('android on darwin and linux pulls to the precomputed path', () => {
+  assert.equal(
+    buildScreenshotCommand({ mode: 'android' }, OUT, 'linux'),
+    "adb shell screencap -p /sdcard/dsh-vision-screen.png && adb pull /sdcard/dsh-vision-screen.png '/tmp/shot.png'",
+  )
+  assert.equal(
+    buildScreenshotCommand({ mode: 'android' }, OUT, 'darwin'),
+    "adb shell screencap -p /sdcard/dsh-vision-screen.png && adb pull /sdcard/dsh-vision-screen.png '/tmp/shot.png'",
+  )
+})
+
+test('android with a device serial targets that adb device', () => {
+  const cmd = buildScreenshotCommand({ mode: 'android', device: 'emulator-5554' }, OUT, 'linux')
+  assert.equal(
+    cmd,
+    "adb -s 'emulator-5554' shell screencap -p /sdcard/dsh-vision-screen.png && adb -s 'emulator-5554' pull /sdcard/dsh-vision-screen.png '/tmp/shot.png'",
+  )
+})
+
+test('ios on darwin captures the booted simulator', () => {
+  assert.equal(
+    buildScreenshotCommand({ mode: 'ios' }, OUT, 'darwin'),
+    "xcrun simctl io booted screenshot '/tmp/shot.png'",
+  )
+})
+
+test('ios off macOS throws', () => {
+  for (const platform of ['win32', 'linux'] as const) {
+    assert.throws(
+      () => buildScreenshotCommand({ mode: 'ios' }, OUT, platform),
+      /mode=ios requires macOS/,
+    )
+  }
+})
+
+test('device dependency hints name adb and xcrun', () => {
+  assert.match(deviceCaptureHint('android'), /adb devices/)
+  assert.match(deviceCaptureHint('ios'), /xcrun simctl/)
 })
 
 // ---------- platform detection ----------

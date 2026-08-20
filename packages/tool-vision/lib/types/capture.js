@@ -33,6 +33,12 @@ export function captureDependencyHint(platform) {
             return '; requires ImageMagick (`import`), `wmctrl` and `xprop` (X11); install with your package manager, e.g. apt install imagemagick wmctrl x11-utils';
     }
 }
+/** Missing-dependency hint for one device capture mode. */
+export function deviceCaptureHint(mode) {
+    return mode === 'android'
+        ? '; requires adb with a connected device or emulator (`adb devices`)'
+        : '; requires macOS with Xcode and a booted simulator (`xcrun simctl`)';
+}
 /**
  * Build the capture command for one request on the given platform.
  * @param args - the tool arguments.
@@ -60,9 +66,47 @@ export function buildScreenshotCommand(args, outPath, platform = currentPlatform
                 throw new Error(`take_screenshot mode=interactive is macOS-only; on ${platform} use mode=region with x/y/width/height`);
             }
             return `screencapture -i -x ${out}`;
+        case 'android':
+            return androidCommand(platform, outPath, args.device);
+        case 'ios':
+            return iosCommand(platform, outPath);
         default:
             throw new Error(`take_screenshot: unsupported mode ${JSON.stringify(args.mode)}`);
     }
+}
+/** Device screenshot path on the device, pulled to the host afterwards. */
+const ANDROID_DEVICE_PATH = '/sdcard/dsh-vision-screen.png';
+/**
+ * Android capture: screencap on the connected device/emulator, then pull the
+ * PNG to the host. Works from any host; requires adb with a device online.
+ * The host write target follows the platform convention (confined temp and an
+ * echoed path on Windows).
+ * @param device - adb serial (`adb devices`); required when several are online.
+ */
+function androidCommand(platform, outPath, device) {
+    const target = device === undefined ? '' : `-s ${quoteDeviceSerial(device)} `;
+    if (platform === 'win32') {
+        // Each adb step must fail loudly: PowerShell continues after a failed
+        // native command, and the trailing Write-Output would mask the error.
+        return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH}; `
+            + `if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; `
+            + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+            + `adb ${target}pull ${ANDROID_DEVICE_PATH} $p; `
+            + `if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; `
+            + `Write-Output $p`;
+    }
+    return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH} && adb ${target}pull ${ANDROID_DEVICE_PATH} '${outPath}'`;
+}
+/** Quote an adb serial for the shell (serials carry no spaces, but stay safe). */
+function quoteDeviceSerial(device) {
+    return `'${device}'`;
+}
+/** iOS capture: booted simulator screenshot (macOS host only). */
+function iosCommand(platform, outPath) {
+    if (platform !== 'darwin') {
+        throw new Error(`take_screenshot mode=ios requires macOS with Xcode (xcrun simctl); current platform is ${platform}`);
+    }
+    return `xcrun simctl io booted screenshot '${outPath}'`;
 }
 /** Fullscreen capture for the platform. */
 function fullscreenCommand(platform, out, outPath) {

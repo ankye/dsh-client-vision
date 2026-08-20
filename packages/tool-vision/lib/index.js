@@ -25,6 +25,10 @@ function captureDependencyHint(platform) {
 		default: return "; requires ImageMagick (`import`), `wmctrl` and `xprop` (X11); install with your package manager, e.g. apt install imagemagick wmctrl x11-utils";
 	}
 }
+/** Missing-dependency hint for one device capture mode. */
+function deviceCaptureHint(mode) {
+	return mode === "android" ? "; requires adb with a connected device or emulator (`adb devices`)" : "; requires macOS with Xcode and a booted simulator (`xcrun simctl`)";
+}
 /**
 * Build the capture command for one request on the given platform.
 * @param args - the tool arguments.
@@ -45,8 +49,33 @@ function buildScreenshotCommand(args, outPath, platform = currentPlatform()) {
 		case "interactive":
 			if (platform !== "darwin") throw new Error(`take_screenshot mode=interactive is macOS-only; on ${platform} use mode=region with x/y/width/height`);
 			return `screencapture -i -x ${out}`;
+		case "android": return androidCommand(platform, outPath, args.device);
+		case "ios": return iosCommand(platform, outPath);
 		default: throw new Error(`take_screenshot: unsupported mode ${JSON.stringify(args.mode)}`);
 	}
+}
+/** Device screenshot path on the device, pulled to the host afterwards. */
+const ANDROID_DEVICE_PATH = "/sdcard/dsh-vision-screen.png";
+/**
+* Android capture: screencap on the connected device/emulator, then pull the
+* PNG to the host. Works from any host; requires adb with a device online.
+* The host write target follows the platform convention (confined temp and an
+* echoed path on Windows).
+* @param device - adb serial (`adb devices`); required when several are online.
+*/
+function androidCommand(platform, outPath, device) {
+	const target = device === void 0 ? "" : `-s ${quoteDeviceSerial(device)} `;
+	if (platform === "win32") return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $p=Join-Path $env:TEMP '${basename(outPath)}'; adb ${target}pull ${ANDROID_DEVICE_PATH} $p; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Output $p`;
+	return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH} && adb ${target}pull ${ANDROID_DEVICE_PATH} '${outPath}'`;
+}
+/** Quote an adb serial for the shell (serials carry no spaces, but stay safe). */
+function quoteDeviceSerial(device) {
+	return `'${device}'`;
+}
+/** iOS capture: booted simulator screenshot (macOS host only). */
+function iosCommand(platform, outPath) {
+	if (platform !== "darwin") throw new Error(`take_screenshot mode=ios requires macOS with Xcode (xcrun simctl); current platform is ${platform}`);
+	return `xcrun simctl io booted screenshot '${outPath}'`;
 }
 /** Fullscreen capture for the platform. */
 function fullscreenCommand(platform, out, outPath) {
@@ -573,7 +602,7 @@ function apply(ctx, config) {
 	});
 	ctx.tools.register(defineTool({
 		name: "take_screenshot",
-		description: "Capture the screen and return a PNG path the recognition tool can read. mode=fullscreen captures the primary display; mode=window requires window_id from list_windows; mode=region captures a rectangle (x, y, width, height); mode=interactive asks the user to select a region. Works on macOS (screencapture), Windows (PowerShell) and Linux (ImageMagick); on macOS the first use may require Screen Recording permission.",
+		description: "Capture the screen and return a PNG path the recognition tool can read. mode=fullscreen captures the primary display; mode=window requires window_id from list_windows; mode=region captures a rectangle (x, y, width, height); mode=interactive asks the user to select a region. mode=android captures a connected Android device/emulator via adb (any host); mode=ios captures the booted iOS simulator via xcrun (macOS host). Host capture works on macOS (screencapture), Windows (PowerShell) and Linux (ImageMagick); on macOS the first use may require Screen Recording permission.",
 		parameters: {
 			mode: {
 				type: "string",
@@ -582,13 +611,19 @@ function apply(ctx, config) {
 					"fullscreen",
 					"window",
 					"region",
-					"interactive"
+					"interactive",
+					"android",
+					"ios"
 				],
-				description: "What to capture: fullscreen, an existing window, a rectangle region, or an interactive user selection."
+				description: "What to capture: fullscreen, an existing window, a rectangle region, an interactive user selection, an Android device/emulator (adb), or the booted iOS simulator (macOS)."
 			},
 			window_id: {
 				type: "number",
 				description: "Required for mode=window; a window id from list_windows."
+			},
+			device: {
+				type: "string",
+				description: "adb serial from `adb devices` (mode=android); required when several devices are online."
 			},
 			x: {
 				type: "number",
@@ -648,7 +683,9 @@ function apply(ctx, config) {
 			if (result.aborted) throw abortedError();
 			if (result.exitCode !== 0) {
 				const stderr = result.stderr.text.trim();
-				const hint = /command not found|not recognized|not found/i.test(stderr) ? captureDependencyHint(currentPlatform()) : /permission|screen recording/i.test(stderr) ? "; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)" : "";
+				const missing = /command not found|not recognized|not found/i.test(stderr);
+				const multipleDevices = /more than one device/i.test(stderr);
+				const hint = missing ? args.mode === "android" || args.mode === "ios" ? deviceCaptureHint(args.mode) : captureDependencyHint(currentPlatform()) : multipleDevices ? "; multiple adb devices are online; pass device=<serial> from `adb devices`" : /permission|screen recording/i.test(stderr) ? "; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)" : "";
 				throw new Error(`screen capture failed (exit ${result.exitCode}): ${stderr || result.stdout.text.trim()}${hint}`);
 			}
 			const path = shellOutputPath(result.stdout.text, currentPlatform(), precomputed);
@@ -771,13 +808,19 @@ function apply(ctx, config) {
 					"fullscreen",
 					"window",
 					"region",
-					"interactive"
+					"interactive",
+					"android",
+					"ios"
 				],
 				description: "Capture mode when image_path is omitted (default fullscreen)."
 			},
 			window_id: {
 				type: "number",
 				description: "Required for mode=window; a window id from list_windows."
+			},
+			device: {
+				type: "string",
+				description: "adb serial from `adb devices` (mode=android); required when several devices are online."
 			},
 			x: {
 				type: "number",
@@ -848,6 +891,7 @@ function apply(ctx, config) {
 				const precomputed = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
 				const shotArgs = { mode: args.mode ?? "fullscreen" };
 				if (args.window_id !== void 0) shotArgs.window_id = args.window_id;
+				if (args.device !== void 0) shotArgs.device = args.device;
 				if (args.x !== void 0) shotArgs.x = args.x;
 				if (args.y !== void 0) shotArgs.y = args.y;
 				if (args.width !== void 0) shotArgs.width = args.width;
@@ -861,7 +905,9 @@ function apply(ctx, config) {
 				if (shot.aborted) throw abortedError();
 				if (shot.exitCode !== 0) {
 					const stderr = shot.stderr.text.trim();
-					const hint = /command not found|not recognized|not found/i.test(stderr) ? captureDependencyHint(currentPlatform()) : /permission|screen recording/i.test(stderr) ? "; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)" : "";
+					const missing = /command not found|not recognized|not found/i.test(stderr);
+					const multipleDevices = /more than one device/i.test(stderr);
+					const hint = missing ? shotArgs.mode === "android" || shotArgs.mode === "ios" ? deviceCaptureHint(shotArgs.mode) : captureDependencyHint(currentPlatform()) : multipleDevices ? "; multiple adb devices are online; pass device=<serial> from `adb devices`" : /permission|screen recording/i.test(stderr) ? "; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)" : "";
 					throw new Error(`screen capture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`);
 				}
 				path = shellOutputPath(shot.stdout.text, currentPlatform(), precomputed);
