@@ -9,7 +9,6 @@
  * - Linux: ImageMagick `import` + `wmctrl`/`xprop` (X11 tooling).
  * @module @deepseek-ai/dsh-tool-vision/capture
  */
-import { basename } from 'node:path';
 /**
  * The platform this process runs on. Anything that is neither macOS nor
  * Windows is treated as Linux (the X11 tooling path).
@@ -21,6 +20,15 @@ export function currentPlatform() {
     if (process.platform === 'win32')
         return 'win32';
     return 'linux';
+}
+/**
+ * Last path segment regardless of host separators. Windows command builders
+ * embed the target file name into `$env:TEMP` joins; `node:path` basename
+ * splits only on the host separator, so a Windows-style path on a POSIX host
+ * would keep the whole path.
+ */
+export function captureFileName(path) {
+    return path.split(/[\\/]/).at(-1) ?? path;
 }
 /** Missing-dependency hint appended to a failed capture/enumeration error. */
 export function captureDependencyHint(platform) {
@@ -90,7 +98,7 @@ function androidCommand(platform, outPath, device) {
         // native command, and the trailing Write-Output would mask the error.
         return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH}; `
             + `if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; `
-            + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+            + `$p=Join-Path $env:TEMP '${captureFileName(outPath)}'; `
             + `adb ${target}pull ${ANDROID_DEVICE_PATH} $p; `
             + `if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; `
             + `Write-Output $p`;
@@ -122,7 +130,7 @@ function fullscreenCommand(platform, out, outPath) {
                 + `$b=New-Object System.Drawing.Bitmap $s.Width,$s.Height; `
                 + `$g=[System.Drawing.Graphics]::FromImage($b); `
                 + `$g.CopyFromScreen($s.X,$s.Y,0,0,$b.Size); `
-                + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+                + `$p=Join-Path $env:TEMP '${captureFileName(outPath)}'; `
                 + `$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); `
                 + `Write-Output $p`;
         default:
@@ -139,7 +147,7 @@ function regionCommand(platform, out, outPath, x, y, width, height) {
                 + `$b=New-Object System.Drawing.Bitmap ${width},${height}; `
                 + `$g=[System.Drawing.Graphics]::FromImage($b); `
                 + `$g.CopyFromScreen(${x},${y},0,0,(New-Object System.Drawing.Size(${width},${height}))); `
-                + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+                + `$p=Join-Path $env:TEMP '${captureFileName(outPath)}'; `
                 + `$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); `
                 + `Write-Output $p`;
         default:
@@ -165,7 +173,7 @@ function windowCommand(platform, out, outPath, windowId) {
                 + `$b=New-Object System.Drawing.Bitmap $w,$ht; `
                 + `$g=[System.Drawing.Graphics]::FromImage($b); `
                 + `$g.CopyFromScreen($r.L,$r.T,0,0,$b.Size); `
-                + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+                + `$p=Join-Path $env:TEMP '${captureFileName(outPath)}'; `
                 + `$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); `
                 + `Write-Output $p`;
         default:

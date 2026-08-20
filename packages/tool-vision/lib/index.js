@@ -17,6 +17,15 @@ function currentPlatform() {
 	if (process.platform === "win32") return "win32";
 	return "linux";
 }
+/**
+* Last path segment regardless of host separators. Windows command builders
+* embed the target file name into `$env:TEMP` joins; `node:path` basename
+* splits only on the host separator, so a Windows-style path on a POSIX host
+* would keep the whole path.
+*/
+function captureFileName(path) {
+	return path.split(/[\\/]/).at(-1) ?? path;
+}
 /** Missing-dependency hint appended to a failed capture/enumeration error. */
 function captureDependencyHint(platform) {
 	switch (platform) {
@@ -65,7 +74,7 @@ const ANDROID_DEVICE_PATH = "/sdcard/dsh-vision-screen.png";
 */
 function androidCommand(platform, outPath, device) {
 	const target = device === void 0 ? "" : `-s ${quoteDeviceSerial(device)} `;
-	if (platform === "win32") return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $p=Join-Path $env:TEMP '${basename(outPath)}'; adb ${target}pull ${ANDROID_DEVICE_PATH} $p; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Output $p`;
+	if (platform === "win32") return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH}; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; $p=Join-Path $env:TEMP '${captureFileName(outPath)}'; adb ${target}pull ${ANDROID_DEVICE_PATH} $p; if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }; Write-Output $p`;
 	return `adb ${target}shell screencap -p ${ANDROID_DEVICE_PATH} && adb ${target}pull ${ANDROID_DEVICE_PATH} '${outPath}'`;
 }
 /** Quote an adb serial for the shell (serials carry no spaces, but stay safe). */
@@ -81,7 +90,7 @@ function iosCommand(platform, outPath) {
 function fullscreenCommand(platform, out, outPath) {
 	switch (platform) {
 		case "darwin": return `screencapture -x ${out}`;
-		case "win32": return `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; \$s=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; \$b=New-Object System.Drawing.Bitmap \$s.Width,\$s.Height; \$g=[System.Drawing.Graphics]::FromImage(\$b); \$g.CopyFromScreen(\$s.X,\$s.Y,0,0,\$b.Size); $p=Join-Path $env:TEMP '${basename(outPath)}'; $b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); Write-Output $p`;
+		case "win32": return `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; \$s=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; \$b=New-Object System.Drawing.Bitmap \$s.Width,\$s.Height; \$g=[System.Drawing.Graphics]::FromImage(\$b); \$g.CopyFromScreen(\$s.X,\$s.Y,0,0,\$b.Size); $p=Join-Path $env:TEMP '${captureFileName(outPath)}'; $b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); Write-Output $p`;
 		default: return `import -window root ${out}`;
 	}
 }
@@ -89,7 +98,7 @@ function fullscreenCommand(platform, out, outPath) {
 function regionCommand(platform, out, outPath, x, y, width, height) {
 	switch (platform) {
 		case "darwin": return `screencapture -x -R ${x},${y},${width},${height} ${out}`;
-		case "win32": return `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b=New-Object System.Drawing.Bitmap ${width},${height}; $g=[System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen(${x},${y},0,0,(New-Object System.Drawing.Size(${width},${height}))); $p=Join-Path $env:TEMP '${basename(outPath)}'; $b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); Write-Output $p`;
+		case "win32": return `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; $b=New-Object System.Drawing.Bitmap ${width},${height}; $g=[System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen(${x},${y},0,0,(New-Object System.Drawing.Size(${width},${height}))); $p=Join-Path $env:TEMP '${captureFileName(outPath)}'; $b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); Write-Output $p`;
 		default: return `import -window root -crop ${width}x${height}+${x}+${y} ${out}`;
 	}
 }
@@ -97,7 +106,7 @@ function regionCommand(platform, out, outPath, x, y, width, height) {
 function windowCommand(platform, out, outPath, windowId) {
 	switch (platform) {
 		case "darwin": return `screencapture -x -l${windowId} ${out}`;
-		case "win32": return `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public struct WR{public int L;public int T;public int R;public int B;}public class WU{[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out WR r);}'; Add-Type -AssemblyName System.Drawing; $h=[IntPtr]::new(${windowId}); $r=New-Object WR; [WU]::GetWindowRect($h,[ref]$r)|Out-Null; $w=$r.R-$r.L; $ht=$r.B-$r.T; $b=New-Object System.Drawing.Bitmap $w,$ht; $g=[System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen($r.L,$r.T,0,0,$b.Size); $p=Join-Path $env:TEMP '${basename(outPath)}'; $b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); Write-Output $p`;
+		case "win32": return `Add-Type -TypeDefinition 'using System;using System.Runtime.InteropServices;public struct WR{public int L;public int T;public int R;public int B;}public class WU{[DllImport("user32.dll")]public static extern bool GetWindowRect(IntPtr h,out WR r);}'; Add-Type -AssemblyName System.Drawing; $h=[IntPtr]::new(${windowId}); $r=New-Object WR; [WU]::GetWindowRect($h,[ref]$r)|Out-Null; $w=$r.R-$r.L; $ht=$r.B-$r.T; $b=New-Object System.Drawing.Bitmap $w,$ht; $g=[System.Drawing.Graphics]::FromImage($b); $g.CopyFromScreen($r.L,$r.T,0,0,$b.Size); $p=Join-Path $env:TEMP '${captureFileName(outPath)}'; $b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); Write-Output $p`;
 		default: return `import -window 0x${windowId.toString(16)} ${out}`;
 	}
 }
@@ -201,7 +210,7 @@ function buildImagePreparationCommand(imagePath, outPath, platform = currentPlat
 	const output = quotePath(outPath, platform);
 	switch (platform) {
 		case "darwin": return `sips -Z ${MAX_EDGE} -s format jpeg -s formatOptions ${JPEG_QUALITY} ${input} --out ${output}`;
-		case "win32": return `Add-Type -AssemblyName System.Drawing; $ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP '${basename(outPath)}'; $src=$null; $bitmap=$null; $graphics=$null; $params=$null; try { $src=[System.Drawing.Image]::FromFile(${input}); $edge=[Math]::Max($src.Width,$src.Height); $scale=[Math]::Min([double]1,[double]${MAX_EDGE}/$edge); $width=[Math]::Max(1,[int][Math]::Round($src.Width*$scale)); $height=[Math]::Max(1,[int][Math]::Round($src.Height*$scale)); $bitmap=New-Object System.Drawing.Bitmap $width,$height; $graphics=[System.Drawing.Graphics]::FromImage($bitmap); $graphics.InterpolationMode=[System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic; $graphics.DrawImage($src,0,0,$width,$height); $encoder=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }; if ($null -eq $encoder) { throw 'JPEG encoder is unavailable' }; $params=New-Object System.Drawing.Imaging.EncoderParameters 1; $params.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,[long]${JPEG_QUALITY}); $bitmap.Save($p,$encoder,$params) } finally { if ($null -ne $params) { $params.Dispose() }; if ($null -ne $graphics) { $graphics.Dispose() }; if ($null -ne $bitmap) { $bitmap.Dispose() }; if ($null -ne $src) { $src.Dispose() } }; Write-Output $p`;
+		case "win32": return `Add-Type -AssemblyName System.Drawing; $ErrorActionPreference='Stop'; $p=Join-Path $env:TEMP '${captureFileName(outPath)}'; $src=$null; $bitmap=$null; $graphics=$null; $params=$null; try { $src=[System.Drawing.Image]::FromFile(${input}); $edge=[Math]::Max($src.Width,$src.Height); $scale=[Math]::Min([double]1,[double]${MAX_EDGE}/$edge); $width=[Math]::Max(1,[int][Math]::Round($src.Width*$scale)); $height=[Math]::Max(1,[int][Math]::Round($src.Height*$scale)); $bitmap=New-Object System.Drawing.Bitmap $width,$height; $graphics=[System.Drawing.Graphics]::FromImage($bitmap); $graphics.InterpolationMode=[System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic; $graphics.DrawImage($src,0,0,$width,$height); $encoder=[System.Drawing.Imaging.ImageCodecInfo]::GetImageEncoders() | Where-Object { $_.MimeType -eq 'image/jpeg' }; if ($null -eq $encoder) { throw 'JPEG encoder is unavailable' }; $params=New-Object System.Drawing.Imaging.EncoderParameters 1; $params.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,[long]${JPEG_QUALITY}); $bitmap.Save($p,$encoder,$params) } finally { if ($null -ne $params) { $params.Dispose() }; if ($null -ne $graphics) { $graphics.Dispose() }; if ($null -ne $bitmap) { $bitmap.Dispose() }; if ($null -ne $src) { $src.Dispose() } }; Write-Output $p`;
 		default: return `convert ${input} -resize '${MAX_EDGE}x${MAX_EDGE}>' -quality ${JPEG_QUALITY} ${output}`;
 	}
 }

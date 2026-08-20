@@ -45,6 +45,13 @@ export interface WindowEntry {
     /** Window title (may be empty when the app exposes none). */
     title: string;
 }
+/**
+ * Last path segment regardless of host separators. Windows command builders
+ * embed the target file name into `$env:TEMP` joins; `node:path` basename
+ * splits only on the host separator, so a Windows-style path on a POSIX host
+ * would keep the whole path.
+ */
+export declare function captureFileName(path: string): string;
 /** Missing-dependency hint appended to a failed capture/enumeration error. */
 export declare function captureDependencyHint(platform: CapturePlatform): string;
 /** Missing-dependency hint for one device capture mode. */

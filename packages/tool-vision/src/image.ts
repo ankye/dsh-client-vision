@@ -7,9 +7,9 @@
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-fs'
 import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
-import { basename, isAbsolute, join, resolve as resolvePath } from 'node:path'
+import { isAbsolute, join, resolve as resolvePath } from 'node:path'
 import { tmpdir } from 'node:os'
-import { currentPlatform, shellOutputPath, type CapturePlatform } from './capture.ts'
+import { captureFileName, currentPlatform, shellOutputPath, type CapturePlatform } from './capture.ts'
 
 /** Long-edge cap applied before submission (control gateway payload size). */
 const MAX_EDGE = 1568
@@ -54,7 +54,7 @@ export function buildImagePreparationCommand(
       // The confined shell may write only its private temp, so save there and
       // echo the path for the caller to read back.
       return `Add-Type -AssemblyName System.Drawing; $ErrorActionPreference='Stop'; `
-        + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+        + `$p=Join-Path $env:TEMP '${captureFileName(outPath)}'; `
         + `$src=$null; $bitmap=$null; $graphics=$null; $params=$null; `
         + `try { $src=[System.Drawing.Image]::FromFile(${input}); `
         + `$edge=[Math]::Max($src.Width,$src.Height); `

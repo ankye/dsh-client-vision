@@ -3,9 +3,9 @@
  * platform image backend, then return base64 bytes for the recognition channel.
  * @module @deepseek-ai/dsh-tool-vision/image
  */
-import { basename, isAbsolute, join, resolve as resolvePath } from 'node:path';
+import { isAbsolute, join, resolve as resolvePath } from 'node:path';
 import { tmpdir } from 'node:os';
-import { currentPlatform, shellOutputPath } from "./capture.js";
+import { captureFileName, currentPlatform, shellOutputPath } from "./capture.js";
 /** Long-edge cap applied before submission (control gateway payload size). */
 const MAX_EDGE = 1568;
 /** JPEG quality for the prepared image. */
@@ -29,7 +29,7 @@ export function buildImagePreparationCommand(imagePath, outPath, platform = curr
             // The confined shell may write only its private temp, so save there and
             // echo the path for the caller to read back.
             return `Add-Type -AssemblyName System.Drawing; $ErrorActionPreference='Stop'; `
-                + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+                + `$p=Join-Path $env:TEMP '${captureFileName(outPath)}'; `
                 + `$src=$null; $bitmap=$null; $graphics=$null; $params=$null; `
                 + `try { $src=[System.Drawing.Image]::FromFile(${input}); `
                 + `$edge=[Math]::Max($src.Width,$src.Height); `
