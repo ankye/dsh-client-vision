@@ -22,7 +22,7 @@ import { tmpdir } from 'node:os'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
-import { buildScreenshotCommand, captureDependencyHint, currentPlatform, listWindowsViaShell, shellOutputPath, type ScreenshotArgs, type WindowEntry } from './capture.ts'
+import { buildScreenshotCommand, captureDependencyHint, currentPlatform, deviceCaptureHint, listWindowsViaShell, shellOutputPath, type ScreenshotArgs, type WindowEntry } from './capture.ts'
 import { imageSizeOf, prepareImage } from './image.ts'
 import { channels } from './channels/index.ts'
 import { abortedError } from './abort.ts'
@@ -70,8 +70,10 @@ interface ViewImageArgs {
   /** Image to describe; omitted to capture the screen instead. */
   image_path?: string
   /** Capture mode when `image_path` is omitted (default fullscreen). */
-  mode?: 'fullscreen' | 'window' | 'region' | 'interactive'
+  mode?: 'fullscreen' | 'window' | 'region' | 'interactive' | 'android' | 'ios'
   window_id?: number
+  /** adb serial from `adb devices` (mode=android; required when several devices are online). */
+  device?: string
   x?: number
   y?: number
   width?: number
@@ -156,15 +158,18 @@ export function apply(ctx: Context, config: VisionConfig): void {
     description: 'Capture the screen and return a PNG path the recognition tool can read. '
       + 'mode=fullscreen captures the primary display; mode=window requires window_id from list_windows; '
       + 'mode=region captures a rectangle (x, y, width, height); mode=interactive asks the user to select a region. '
-      + 'Works on macOS (screencapture), Windows (PowerShell) and Linux (ImageMagick); on macOS the first use may require Screen Recording permission.',
+      + 'mode=android captures a connected Android device/emulator via adb (any host); '
+      + 'mode=ios captures the booted iOS simulator via xcrun (macOS host). '
+      + 'Host capture works on macOS (screencapture), Windows (PowerShell) and Linux (ImageMagick); on macOS the first use may require Screen Recording permission.',
     parameters: {
       mode: {
         type: 'string',
         required: true,
-        enum: ['fullscreen', 'window', 'region', 'interactive'],
-        description: 'What to capture: fullscreen, an existing window, a rectangle region, or an interactive user selection.',
+        enum: ['fullscreen', 'window', 'region', 'interactive', 'android', 'ios'],
+        description: 'What to capture: fullscreen, an existing window, a rectangle region, an interactive user selection, an Android device/emulator (adb), or the booted iOS simulator (macOS).',
       },
       window_id: { type: 'number', description: 'Required for mode=window; a window id from list_windows.' },
+      device: { type: 'string', description: 'adb serial from `adb devices` (mode=android); required when several devices are online.' },
       x: { type: 'number', description: 'Region left edge in screen points (mode=region).' },
       y: { type: 'number', description: 'Region top edge in screen points (mode=region).' },
       width: { type: 'number', description: 'Region width in screen points (mode=region).' },
@@ -200,11 +205,16 @@ export function apply(ctx: Context, config: VisionConfig): void {
       if (result.exitCode !== 0) {
         const stderr = result.stderr.text.trim()
         const missing = /command not found|not recognized|not found/i.test(stderr)
+        const multipleDevices = /more than one device/i.test(stderr)
         const hint = missing
-          ? captureDependencyHint(currentPlatform())
-          : /permission|screen recording/i.test(stderr)
-            ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
-            : ''
+          ? args.mode === 'android' || args.mode === 'ios'
+            ? deviceCaptureHint(args.mode)
+            : captureDependencyHint(currentPlatform())
+          : multipleDevices
+            ? '; multiple adb devices are online; pass device=<serial> from `adb devices`'
+            : /permission|screen recording/i.test(stderr)
+              ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+              : ''
         throw new Error(`screen capture failed (exit ${result.exitCode}): ${stderr || result.stdout.text.trim()}${hint}`)
       }
       const path = shellOutputPath(result.stdout.text, currentPlatform(), precomputed)
@@ -298,10 +308,11 @@ export function apply(ctx: Context, config: VisionConfig): void {
       image_path: { type: 'string', description: 'Path to a PNG/JPEG file. Omit to capture the screen instead.' },
       mode: {
         type: 'string',
-        enum: ['fullscreen', 'window', 'region', 'interactive'],
+        enum: ['fullscreen', 'window', 'region', 'interactive', 'android', 'ios'],
         description: 'Capture mode when image_path is omitted (default fullscreen).',
       },
       window_id: { type: 'number', description: 'Required for mode=window; a window id from list_windows.' },
+      device: { type: 'string', description: 'adb serial from `adb devices` (mode=android); required when several devices are online.' },
       x: { type: 'number', description: 'Region left edge in screen points (mode=region).' },
       y: { type: 'number', description: 'Region top edge in screen points (mode=region).' },
       width: { type: 'number', description: 'Region width in screen points (mode=region).' },
@@ -347,6 +358,7 @@ export function apply(ctx: Context, config: VisionConfig): void {
         const precomputed = join(tmpdir(), `dsh-vision-${Date.now()}.png`)
         const shotArgs: ScreenshotArgs = { mode: args.mode ?? 'fullscreen' }
         if (args.window_id !== undefined) shotArgs.window_id = args.window_id
+        if (args.device !== undefined) shotArgs.device = args.device
         if (args.x !== undefined) shotArgs.x = args.x
         if (args.y !== undefined) shotArgs.y = args.y
         if (args.width !== undefined) shotArgs.width = args.width
@@ -361,11 +373,16 @@ export function apply(ctx: Context, config: VisionConfig): void {
         if (shot.exitCode !== 0) {
           const stderr = shot.stderr.text.trim()
           const missing = /command not found|not recognized|not found/i.test(stderr)
+          const multipleDevices = /more than one device/i.test(stderr)
           const hint = missing
-            ? captureDependencyHint(currentPlatform())
-            : /permission|screen recording/i.test(stderr)
-              ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
-              : ''
+            ? shotArgs.mode === 'android' || shotArgs.mode === 'ios'
+              ? deviceCaptureHint(shotArgs.mode)
+              : captureDependencyHint(currentPlatform())
+            : multipleDevices
+              ? '; multiple adb devices are online; pass device=<serial> from `adb devices`'
+              : /permission|screen recording/i.test(stderr)
+                ? '; macOS Screen Recording permission may be missing (System Settings → Privacy & Security → Screen Recording)'
+                : ''
           throw new Error(`screen capture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`)
         }
         path = shellOutputPath(shot.stdout.text, currentPlatform(), precomputed)

@@ -21,10 +21,12 @@ export type CapturePlatform = 'darwin' | 'win32' | 'linux';
 export declare function currentPlatform(): CapturePlatform;
 /** The `take_screenshot` tool's arguments. */
 export interface ScreenshotArgs {
-    /** What to capture. */
-    mode: 'fullscreen' | 'window' | 'region' | 'interactive';
+    /** What to capture: a host screen, an Android device/emulator, or an iOS simulator. */
+    mode: 'fullscreen' | 'window' | 'region' | 'interactive' | 'android' | 'ios';
     /** Window id from {@link listWindowsViaShell} (mode=window). */
     window_id?: number;
+    /** adb serial from `adb devices` (mode=android, required when several devices are online). */
+    device?: string;
     /** Region left edge in screen points (mode=region). */
     x?: number;
     /** Region top edge in screen points (mode=region). */
@@ -45,6 +47,8 @@ export interface WindowEntry {
 }
 /** Missing-dependency hint appended to a failed capture/enumeration error. */
 export declare function captureDependencyHint(platform: CapturePlatform): string;
+/** Missing-dependency hint for one device capture mode. */
+export declare function deviceCaptureHint(mode: 'android' | 'ios'): string;
 /**
  * Build the capture command for one request on the given platform.
  * @param args - the tool arguments.
