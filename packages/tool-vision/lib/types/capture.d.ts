@@ -10,6 +10,7 @@
  * @module @deepseek-ai/dsh-tool-vision/capture
  */
 import type { Context } from '@deepseek-ai/cordis';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
 /** A platform the capture backend can run on. */
 export type CapturePlatform = 'darwin' | 'win32' | 'linux';
 /**
@@ -53,11 +54,22 @@ export declare function captureDependencyHint(platform: CapturePlatform): string
  */
 export declare function buildScreenshotCommand(args: ScreenshotArgs, outPath: string, platform?: CapturePlatform): string;
 /**
+ * Resolve the file path a capture/preparation command wrote. Windows commands
+ * save into the confined shell's private temp (the only writable temp) and
+ * echo the absolute path; other platforms write to the caller's precomputed
+ * temp path, which their sandbox grants.
+ * @param stdout - the shell command's stdout.
+ * @param platform - the capture backend platform.
+ * @param precomputed - the caller's precomputed output path (darwin/linux).
+ * @returns the written file path.
+ */
+export declare function shellOutputPath(stdout: string, platform: CapturePlatform, precomputed: string): string;
+/**
  * Enumerate on-screen windows through the platform backend.
  * @param ctx - plugin context supplying the shell seam.
  * @param signal - caller cancellation signal.
  * @param platform - the capture backend platform (defaults to this process's).
  * @returns the window entries, ordered as the backend reported them.
  */
-export declare function listWindowsViaShell(ctx: Context, signal: AbortSignal | undefined, platform?: CapturePlatform): Promise<WindowEntry[]>;
+export declare function listWindowsViaShell(ctx: Context, signal: AbortSignal | undefined, platform?: CapturePlatform, sandboxPolicy?: SandboxExecutionPolicy): Promise<WindowEntry[]>;
 //# sourceMappingURL=capture.d.ts.map

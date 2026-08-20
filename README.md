@@ -30,8 +30,8 @@ Give your DeepSeek Harness agent **eyes**. `dsh-client-vision` is a screen-captu
 | Platform | Capture backend | Window enumeration | Extra requirements |
 |---|---|---|---|
 | macOS | `screencapture` (system) | Swift `CGWindowList` | Screen Recording permission on first use |
-| Windows | PowerShell `System.Drawing` (system) | `Get-Process` main window handles | none |
-| Linux | ImageMagick `import` | `wmctrl` + `xprop` | X11 tooling: `imagemagick`, `wmctrl`, `x11-utils` |
+| Windows | PowerShell `System.Drawing` (system) | `Get-Process` main window handles | PowerShell `System.Drawing` |
+| Linux | ImageMagick `import` | `wmctrl` + `xprop` | ImageMagick (`convert`/`identify`), `wmctrl`, `x11-utils` |
 
 `mode=interactive` (system selection UI) is macOS-only; on Windows and Linux
 use `mode=region` with explicit coordinates.
@@ -42,7 +42,7 @@ Configured in **Settings → Plugins → Plugin configuration → Vision**:
 
 | Field | Meaning |
 |---|---|
-| Endpoint (`baseUrl`) | Domain + optional path prefix; `/chat/completions` is appended. e.g. `https://token.uzstudio.com/v1` |
+| Endpoint (`baseUrl`) | Domain + optional path prefix; `/chat/completions` is appended. e.g. `https://api.example.com/v1` |
 | Channel | The active recognition backend (currently `gpt`). |
 | Model | `gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra` |
 | API key | Stored through the harness `credentials` service as `VISION_GPT_API_KEY`; the literal never leaves your machine. |

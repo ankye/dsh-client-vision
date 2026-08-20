@@ -12,6 +12,8 @@
 
 import type { Context } from '@deepseek-ai/cordis'
 import type {} from '@deepseek-ai/dsh-shell'
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox'
+import { basename } from 'node:path'
 
 /** A platform the capture backend can run on. */
 export type CapturePlatform = 'darwin' | 'win32' | 'linux'
@@ -80,17 +82,17 @@ export function buildScreenshotCommand(
   const out = `'${outPath}'`
   switch (args.mode) {
     case 'fullscreen':
-      return fullscreenCommand(platform, out)
+      return fullscreenCommand(platform, out, outPath)
     case 'region':
       if (args.x === undefined || args.y === undefined || args.width === undefined || args.height === undefined) {
         throw new Error('take_screenshot mode=region requires x, y, width, and height')
       }
-      return regionCommand(platform, out, args.x, args.y, args.width, args.height)
+      return regionCommand(platform, out, outPath, args.x, args.y, args.width, args.height)
     case 'window':
       if (args.window_id === undefined) {
         throw new Error('take_screenshot mode=window requires window_id from list_windows')
       }
-      return windowCommand(platform, out, args.window_id)
+      return windowCommand(platform, out, outPath, args.window_id)
     case 'interactive':
       if (platform !== 'darwin') {
         throw new Error(
@@ -104,18 +106,22 @@ export function buildScreenshotCommand(
 }
 
 /** Fullscreen capture for the platform. */
-function fullscreenCommand(platform: CapturePlatform, out: string): string {
+function fullscreenCommand(platform: CapturePlatform, out: string, outPath: string): string {
   switch (platform) {
     case 'darwin':
       return `screencapture -x ${out}`
     case 'win32':
-      // System.Windows.Forms.Screen gives the full virtual screen bounds.
+      // System.Windows.Forms.Screen gives the full virtual screen bounds. The
+      // confined shell may write only its private temp, so save there and echo
+      // the path for the caller to read back.
       return `Add-Type -AssemblyName System.Windows.Forms,System.Drawing; `
         + `$s=[System.Windows.Forms.Screen]::PrimaryScreen.Bounds; `
         + `$b=New-Object System.Drawing.Bitmap $s.Width,$s.Height; `
         + `$g=[System.Drawing.Graphics]::FromImage($b); `
         + `$g.CopyFromScreen($s.X,$s.Y,0,0,$b.Size); `
-        + `$b.Save(${out},[System.Drawing.Imaging.ImageFormat]::Png)`
+        + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+        + `$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); `
+        + `Write-Output $p`
     default:
       return `import -window root ${out}`
   }
@@ -125,6 +131,7 @@ function fullscreenCommand(platform: CapturePlatform, out: string): string {
 function regionCommand(
   platform: CapturePlatform,
   out: string,
+  outPath: string,
   x: number,
   y: number,
   width: number,
@@ -138,14 +145,16 @@ function regionCommand(
         + `$b=New-Object System.Drawing.Bitmap ${width},${height}; `
         + `$g=[System.Drawing.Graphics]::FromImage($b); `
         + `$g.CopyFromScreen(${x},${y},0,0,(New-Object System.Drawing.Size(${width},${height}))); `
-        + `$b.Save(${out},[System.Drawing.Imaging.ImageFormat]::Png)`
+        + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+        + `$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); `
+        + `Write-Output $p`
     default:
       return `import -window root -crop ${width}x${height}+${x}+${y} ${out}`
   }
 }
 
 /** Window capture for the platform. */
-function windowCommand(platform: CapturePlatform, out: string, windowId: number): string {
+function windowCommand(platform: CapturePlatform, out: string, outPath: string, windowId: number): string {
   switch (platform) {
     case 'darwin':
       return `screencapture -x -l${windowId} ${out}`
@@ -163,11 +172,35 @@ function windowCommand(platform: CapturePlatform, out: string, windowId: number)
         + `$b=New-Object System.Drawing.Bitmap $w,$ht; `
         + `$g=[System.Drawing.Graphics]::FromImage($b); `
         + `$g.CopyFromScreen($r.L,$r.T,0,0,$b.Size); `
-        + `$b.Save(${out},[System.Drawing.Imaging.ImageFormat]::Png)`
+        + `$p=Join-Path $env:TEMP '${basename(outPath)}'; `
+        + `$b.Save($p,[System.Drawing.Imaging.ImageFormat]::Png); `
+        + `Write-Output $p`
     default:
       // X11 ids are hexadecimal (0x…); `import -window` accepts them as-is.
       return `import -window 0x${windowId.toString(16)} ${out}`
   }
+}
+
+/**
+ * Resolve the file path a capture/preparation command wrote. Windows commands
+ * save into the confined shell's private temp (the only writable temp) and
+ * echo the absolute path; other platforms write to the caller's precomputed
+ * temp path, which their sandbox grants.
+ * @param stdout - the shell command's stdout.
+ * @param platform - the capture backend platform.
+ * @param precomputed - the caller's precomputed output path (darwin/linux).
+ * @returns the written file path.
+ */
+export function shellOutputPath(
+  stdout: string,
+  platform: CapturePlatform,
+  precomputed: string,
+): string {
+  if (platform !== 'win32') return precomputed
+  const lines = stdout.split('\n').map(line => line.trim()).filter(line => line !== '')
+  const last = lines.at(-1)
+  if (last === undefined) throw new Error('capture command produced no output path')
+  return last
 }
 
 /** Swift program enumerating normal-layer windows, read from stdin by `swift -`. */
@@ -185,9 +218,10 @@ if let list = CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String: An
   }
 }`
 
-/** Windows: processes with a main window handle. */
+/** Windows: processes with a main window handle. PowerShell format strings
+ * do not interpret `\t`, so the tab separator comes from `[char]9`. */
 const WINDOW_LIST_POWERSHELL = `Get-Process | Where-Object { $_.MainWindowHandle -ne 0 } | `
-  + `ForEach-Object { '{0}\\t{1}\\t{2}' -f $_.MainWindowHandle, $_.ProcessName, $_.MainWindowTitle }`
+  + `ForEach-Object { $t=[char]9; "$($_.MainWindowHandle)$t$($_.ProcessName)$t$($_.MainWindowTitle)" }`
 
 /** Linux: X11 windows via wmctrl + xprop (id decimal, class as app, title). */
 const WINDOW_LIST_X11 = `wmctrl -l | while read -r id host title; do `
@@ -206,6 +240,7 @@ export async function listWindowsViaShell(
   ctx: Context,
   signal: AbortSignal | undefined,
   platform: CapturePlatform = currentPlatform(),
+  sandboxPolicy?: SandboxExecutionPolicy,
 ): Promise<WindowEntry[]> {
   const spec = platform === 'darwin'
     ? { command: 'swift -', stdin: WINDOW_LIST_SWIFT }
@@ -214,6 +249,7 @@ export async function listWindowsViaShell(
     ...spec,
     timeoutMs: 30000,
     signal,
+    ...sandboxPolicy !== undefined ? { sandboxPolicy } : {},
   }))
   if (result.exitCode !== 0) {
     const stderr = result.stderr.text.trim()

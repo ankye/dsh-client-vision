@@ -9,11 +9,11 @@
  */
 import z from '@deepseek-ai/schemastery';
 import { createReadStream } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { defineTool } from '@deepseek-ai/dsh-tools';
 import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings';
-import { buildScreenshotCommand, captureDependencyHint, currentPlatform, listWindowsViaShell } from "./capture.js";
+import { buildScreenshotCommand, captureDependencyHint, currentPlatform, listWindowsViaShell, shellOutputPath } from "./capture.js";
 import { imageSizeOf, prepareImage } from "./image.js";
 import { channels } from "./channels/index.js";
 import { abortedError } from "./abort.js";
@@ -34,6 +34,21 @@ export const Config = z.object({
 /** Default instruction when the model passes none. */
 const DEFAULT_PROMPT = 'Describe the image in detail, in the language of the conversation.';
 /**
+ * Resolve the calling session's sandbox policy for a direct shell call. The
+ * tool layer normally stamps this per execution; the vision tools call
+ * `ctx.shell` directly, so they resolve it the same way to keep the session's
+ * confinement (and its persistent private temp) across capture/prepare steps.
+ * @param ctx - plugin context.
+ * @param exec - the executing tool call.
+ * @returns the session policy, or undefined when no policy service is mounted.
+ */
+function sessionShellPolicy(ctx, exec) {
+    const sandboxPolicy = ctx.get('sandboxPolicy');
+    return sandboxPolicy === undefined
+        ? undefined
+        : sandboxPolicy.resolve(exec.agent === undefined ? {} : { session: exec.agent.session });
+}
+/**
  * Mount the vision tools and settings section.
  * @param ctx - plugin context.
  * @param config - the composed row config (schema-defaulted by Cordis).
@@ -46,8 +61,9 @@ export function apply(ctx, config) {
     });
     let lastScreenshotPath;
     // Serve screenshot PNGs to the browser UI (the model context keeps text only).
-    // Screenshots live under the platform temp directory (os.tmpdir) so the
-    // route works on macOS, Windows and Linux alike.
+    // The captured file lives at the recorded screenshot path (the platform temp
+    // on macOS/Linux, the sandbox private temp on Windows), so the route serves
+    // that file directly instead of re-deriving a directory.
     const webServer = ctx.get('webServer');
     if (webServer !== undefined) {
         webServer.register({
@@ -56,12 +72,15 @@ export function apply(ctx, config) {
             handler: (req, res) => {
                 const pathname = new URL(req.url ?? '/', 'http://x').pathname;
                 const base = pathname.split('/').pop() ?? '';
-                if (!/^[A-Za-z0-9._-]+$/.test(base)) {
+                const target = lastScreenshotPath !== undefined && basename(lastScreenshotPath) === base
+                    ? lastScreenshotPath
+                    : undefined;
+                if (target === undefined) {
                     res.writeHead(404);
                     res.end();
                     return;
                 }
-                const stream = createReadStream(join(tmpdir(), base));
+                const stream = createReadStream(target);
                 stream.on('error', () => {
                     res.writeHead(404);
                     res.end();
@@ -114,12 +133,14 @@ export function apply(ctx, config) {
                 }],
         },
         async execute(args, exec) {
-            const path = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
-            const command = buildScreenshotCommand(args, path);
+            const policy = sessionShellPolicy(ctx, exec);
+            const precomputed = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
+            const command = buildScreenshotCommand(args, precomputed);
             const result = await ctx.shell.run(ctx.shell.resolve({
                 command,
                 timeoutMs: 90000,
                 signal: exec.signal,
+                ...policy !== undefined ? { sandboxPolicy: policy } : {},
             }));
             if (result.aborted)
                 throw abortedError();
@@ -133,7 +154,8 @@ export function apply(ctx, config) {
                         : '';
                 throw new Error(`screen capture failed (exit ${result.exitCode}): ${stderr || result.stdout.text.trim()}${hint}`);
             }
-            const size = await imageSizeOf(ctx, path, exec.signal);
+            const path = shellOutputPath(result.stdout.text, currentPlatform(), precomputed);
+            const size = await imageSizeOf(ctx, path, exec.signal, policy);
             lastScreenshotPath = path;
             return { path, width: size.width, height: size.height, mode: args.mode };
         },
@@ -162,7 +184,7 @@ export function apply(ctx, config) {
                 }],
         },
         async execute(_args, exec) {
-            return listWindowsViaShell(ctx, exec.signal);
+            return listWindowsViaShell(ctx, exec.signal, undefined, sessionShellPolicy(ctx, exec));
         },
     }));
     ctx.tools.register(defineTool({
@@ -199,7 +221,7 @@ export function apply(ctx, config) {
             if (imagePath === undefined) {
                 throw new Error('no image: pass image_path or call take_screenshot first');
             }
-            const prepared = await prepareImage(ctx, imagePath, exec.agent?.session.header.cwd, exec.signal);
+            const prepared = await prepareImage(ctx, imagePath, exec.agent?.session.header.cwd, exec.signal, sessionShellPolicy(ctx, exec));
             const prompt = args.prompt ?? DEFAULT_PROMPT;
             const description = await channel.analyze(ctx, {
                 imageB64: prepared.base64,
@@ -266,7 +288,8 @@ export function apply(ctx, config) {
             }
             else {
                 source = 'screenshot';
-                path = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
+                const policy = sessionShellPolicy(ctx, exec);
+                const precomputed = join(tmpdir(), `dsh-vision-${Date.now()}.png`);
                 const shotArgs = { mode: args.mode ?? 'fullscreen' };
                 if (args.window_id !== undefined)
                     shotArgs.window_id = args.window_id;
@@ -279,9 +302,10 @@ export function apply(ctx, config) {
                 if (args.height !== undefined)
                     shotArgs.height = args.height;
                 const shot = await ctx.shell.run(ctx.shell.resolve({
-                    command: buildScreenshotCommand(shotArgs, path),
+                    command: buildScreenshotCommand(shotArgs, precomputed),
                     timeoutMs: 90000,
                     signal: exec.signal,
+                    ...policy !== undefined ? { sandboxPolicy: policy } : {},
                 }));
                 if (shot.aborted)
                     throw abortedError();
@@ -295,9 +319,10 @@ export function apply(ctx, config) {
                             : '';
                     throw new Error(`screen capture failed (exit ${shot.exitCode}): ${stderr || shot.stdout.text.trim()}${hint}`);
                 }
+                path = shellOutputPath(shot.stdout.text, currentPlatform(), precomputed);
                 lastScreenshotPath = path;
             }
-            const prepared = await prepareImage(ctx, path, exec.agent?.session.header.cwd, exec.signal);
+            const prepared = await prepareImage(ctx, path, exec.agent?.session.header.cwd, exec.signal, sessionShellPolicy(ctx, exec));
             const description = await channel.analyze(ctx, {
                 imageB64: prepared.base64,
                 mime: prepared.mime,
