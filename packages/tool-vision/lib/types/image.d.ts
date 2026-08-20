@@ -1,9 +1,11 @@
 /**
- * Image preparation: downscale the long edge and re-encode as JPEG through
- * macOS `sips`, then return base64 bytes for the recognition channel.
+ * Image preparation: downscale the long edge and re-encode as JPEG through the
+ * platform image backend, then return base64 bytes for the recognition channel.
  * @module @deepseek-ai/dsh-tool-vision/image
  */
 import type { Context } from '@deepseek-ai/cordis';
+import type { SandboxExecutionPolicy } from '@deepseek-ai/dsh-sandbox';
+import { type CapturePlatform } from './capture.ts';
 /** A prepared image ready for a channel call. */
 export interface PreparedImage {
     /** Base64-encoded JPEG bytes. */
@@ -15,6 +17,10 @@ export interface PreparedImage {
     /** Pixel height of the prepared image. */
     height: number;
 }
+/** Build the platform-native resize and JPEG encoding command. */
+export declare function buildImagePreparationCommand(imagePath: string, outPath: string, platform?: CapturePlatform): string;
+/** Build the platform-native image-dimension command. */
+export declare function buildImageSizeCommand(imagePath: string, platform?: CapturePlatform): string;
 /**
  * Downscale/re-encode one image file and return it base64-encoded.
  * @param ctx - plugin context supplying the fs and shell seams.
@@ -23,9 +29,9 @@ export interface PreparedImage {
  * @param signal - caller cancellation signal.
  * @returns the prepared image.
  */
-export declare function prepareImage(ctx: Context, imagePath: string, cwd: string | undefined, signal?: AbortSignal): Promise<PreparedImage>;
-/** Read a PNG/JPEG's pixel dimensions through `sips`. */
-export declare function imageSizeOf(ctx: Context, path: string, signal?: AbortSignal): Promise<{
+export declare function prepareImage(ctx: Context, imagePath: string, cwd: string | undefined, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy): Promise<PreparedImage>;
+/** Read a PNG/JPEG's pixel dimensions through the platform image backend. */
+export declare function imageSizeOf(ctx: Context, path: string, signal?: AbortSignal, sandboxPolicy?: SandboxExecutionPolicy): Promise<{
     width: number;
     height: number;
 }>;

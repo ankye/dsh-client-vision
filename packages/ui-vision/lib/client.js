@@ -732,7 +732,7 @@ window.__ModuleLoader__.load({
 						id: "plugin-config-vision-endpoint",
 						label: t("baseUrl"),
 						hint: t("baseUrlHint"),
-						placeholder: "https://token.uzstudio.com/v1",
+						placeholder: "https://api.example.com/v1",
 						overriddenLabel: t("overridden"),
 						resetLabel: t("reset"),
 						invalidLabel: t("invalidNumber"),

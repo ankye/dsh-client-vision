@@ -25,13 +25,23 @@
 | `analyze_image` | 把图片（指定路径，或最近一次截图）交给当前配置的视觉通道，返回纯文本描述。 |
 | `view_image` | 一步「看一下」：截屏（或传入 `image_path`）并经活动通道识别。截图会在 Web 对话中渲染为图片卡片，而模型上下文只拿到文字描述——图片字节从不进入模型上下文。 |
 
+### 平台
+
+| 平台 | 截图后端 | 窗口枚举 | 额外要求 |
+|---|---|---|---|
+| macOS | 系统 `screencapture` | Swift `CGWindowList` | 首次使用授予屏幕录制权限 |
+| Windows | PowerShell `System.Drawing` | `Get-Process` 主窗口句柄 | PowerShell `System.Drawing` |
+| Linux | ImageMagick `import` | `wmctrl` + `xprop` | ImageMagick（`convert`/`identify`）、`wmctrl`、`x11-utils` |
+
+`interactive` 手动框选只支持 macOS；Windows 和 Linux 请使用带坐标的 `region`。
+
 ### 设置（`vision` 命名空间）
 
 配置入口：**设置 → 插件 → 插件配置 →「图像识别」**
 
 | 字段 | 含义 |
 |---|---|
-| 接口地址（`baseUrl`） | 域名 + 可选路径前缀；自动拼接 `/chat/completions`。例：`https://token.uzstudio.com/v1` |
+| 接口地址（`baseUrl`） | 域名 + 可选路径前缀；自动拼接 `/chat/completions`。例：`https://api.example.com/v1` |
 | 识别通道 | 当前生效的视觉后端（目前为 `gpt`） |
 | 模型 | `gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra` |
 | API Key | 通过 harness `credentials` 服务存储为 `VISION_GPT_API_KEY`；明文永远不离开你的机器 |

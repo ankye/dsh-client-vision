@@ -14,7 +14,8 @@
 ## 前置条件
 
 - 对方运行**同源的 deepseek-harness 部署**（本仓库 `0.1.0-rc.7` 系；peer 依赖按版本匹配，跨版本可能有兼容风险）。
-- 对方有 macOS（截图/窗口枚举为 macOS-only；非 macOS 行会自动禁用）。
+- 对方使用 macOS、Windows 或 Linux；`interactive` 手动框选仅支持 macOS，Windows/Linux 使用 `region` 坐标截图。
+- Linux 需要 ImageMagick、`wmctrl` 与 `x11-utils`；Windows 使用系统自带 PowerShell `System.Drawing`。
 - **密钥绝不分发**：`VISION_GPT_API_KEY` 由对方在设置页自行填写（存到对方机器 `.credentials.yaml`）。
 
 ## 分发方式（按对方环境三选一）
@@ -85,7 +86,7 @@ cd ~/.dsh/profiles/web && pnpm add file:/path/to/*.tgz   # 或 dsh plugin --prof
 
 1. 重启 harness。
 2. 工具目录应出现 `take_screenshot` / `list_windows` / `analyze_image`（**所有 preset 可用**，host 层全局挂载）。
-3. 设置 → 插件 → 插件配置 →「图像识别」卡片：填端点（如 `https://token.uzstudio.com/v1`）、选模型（`gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra`）、填自己的 API Key（存为 `VISION_GPT_API_KEY`），保存。
+3. 设置 → 插件 → 插件配置 →「图像识别」卡片：填端点（如 `https://api.example.com/v1`）、选模型（`gpt-5.5` / `gpt-5.6-sol` / `gpt-5.6-terra`）、填自己的 API Key（存为 `VISION_GPT_API_KEY`），保存。
 4. 验证：让 agent 执行 `take_screenshot` → `analyze_image`。
 
 ## 注意事项

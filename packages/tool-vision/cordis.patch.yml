@@ -1,6 +1,5 @@
 # @deepseek-ai/dsh-tool-vision bundle patch: mounts the vision tools on the
-# HOST plane so every agent preset sees them. macOS-only capture.
+# HOST plane so every agent preset sees them on supported capture platforms.
 - insert:
     - id: tool-vision
       name: '@deepseek-ai/dsh-tool-vision'
-      disabled: !!js process.platform !== 'darwin'

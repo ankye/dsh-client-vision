@@ -70,6 +70,11 @@ test('shipped artifacts referenced by package.json exist', () => {
   }
 })
 
+test('vision bundle does not disable supported capture platforms', () => {
+  const patch = readFileSync(join(ROOT, 'packages', 'tool-vision', 'cordis.patch.yml'), 'utf8')
+  assert.doesNotMatch(patch, /^\s*disabled:/mu)
+})
+
 test('README documents every model-facing tool', () => {
   const readme = readFileSync(join(ROOT, 'README.md'), 'utf8')
   for (const tool of ['take_screenshot', 'list_windows', 'analyze_image', 'view_image']) {
