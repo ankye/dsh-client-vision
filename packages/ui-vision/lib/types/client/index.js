@@ -13,19 +13,18 @@ import { ViewImageToolView } from "./ViewImageToolView.js";
 import { VISION_NS, VisionCardController } from "./vision-card-controller.js";
 import { en, zh } from "./locales.js";
 /** Required services (cordis fiber inject). */
-export const inject = ['slots', 'locale', 'connection', 'remote', 'settingsScope'];
+export const inject = ['slots', 'locale', 'remote', 'remote.credentials', 'settingsScope'];
 /**
  * Mount the vision settings card.
  * @param ctx - the browser plugin context.
  */
 export function apply(ctx) {
-    const { api } = ctx.get('connection');
     ctx.effect(() => ctx.locale.register(VISION_NS, { zh, en }), 'ui-vision: dictionaries');
-    const vision = new VisionCardController(ctx.settingsScope.bind({ namespace: VISION_NS }), api);
+    const vision = new VisionCardController(ctx.settingsScope.bind({ namespace: VISION_NS }), ctx.remote.credentials);
     // A key written on another surface (Models page, another card) reaches the
     // Host without touching this section; the forwarded event is the only
     // signal the badge can re-read on.
-    ctx.effect(() => ctx.remote.$on('credentials/updated', (ref) => { vision.refreshCredential(ref); }), 'ui-vision: credential invalidations');
+    ctx.effect(() => ctx.remote.$on('credentials/reference-updated', (ref) => { vision.refreshCredential(ref); }), 'ui-vision: credential invalidations');
     ctx.slots.inject('tool.call.toolview', () => ctx.slots.register({
         name: 'tool.call.toolview',
         key: 'view_image',

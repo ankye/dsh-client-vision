@@ -9,7 +9,7 @@
  * asked for and could not preview; staged text makes what is on screen exactly
  * what a save would store.
  */
-import { createSnapshotStore } from '@deepseek-ai/dsh-client-runtime/client';
+import { createSnapshotStore } from '@deepseek-ai/dsh-client-store';
 /** A free-text field. An empty draft clears the field. */
 export function textField(field) {
     return {

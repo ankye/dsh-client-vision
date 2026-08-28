@@ -7,8 +7,9 @@
  * reference the section names. Channel and model are enum selects, so adding a
  * recognition channel later is one option here and one section value.
  */
-import type { IApiClient } from '@deepseek-ai/dsh-client-connection/client';
-import type { SettingsScope, SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client';
+import type { ClientRemote } from '@deepseek-ai/dsh-api-remotes/client';
+import type { SnapshotStore } from '@deepseek-ai/dsh-client-store';
+import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client';
 import { type CardActions, type CardFieldState, type CardShell } from './card-form.ts';
 /** Namespace of the vision capability. Spelled here rather than imported. */
 export declare const VISION_NS = "vision";
@@ -24,6 +25,8 @@ export declare const VISION_CHANNELS: readonly ["gpt", "zhipu", "ollama"];
  * switch with the selected channel.
  */
 export declare const VISION_MODEL_LISTS: Record<string, readonly string[]>;
+/** The credentials Remote methods this card reads and writes through. */
+export type VisionCredentials = Pick<ClientRemote['credentials'], 'describe' | 'set'>;
 /** The vision fields this card edits. */
 export interface VisionSettings {
     /** Active recognition channel. */
@@ -64,15 +67,15 @@ export interface VisionCardFace extends CardActions {
 /** Bridges the `vision` scope and the credentials domain onto the card. */
 export declare class VisionCardController {
     private readonly scope;
-    private readonly api;
+    private readonly credentials;
     private readonly form;
     private readonly store;
     private credential;
     /**
      * @param scope - the bound settings scope for the `vision` namespace.
-     * @param api - wire face used for the credential the section references.
+     * @param credentials - Remote face used for the credential the section references.
      */
-    constructor(scope: SettingsScope<VisionSettings>, api: Pick<IApiClient, 'credentials'>);
+    constructor(scope: SettingsScope<VisionSettings>, credentials: VisionCredentials);
     private projection;
     /**
      * Ask the credentials domain about the reference the section currently names.

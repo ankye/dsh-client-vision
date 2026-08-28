@@ -8,8 +8,8 @@
  * never enter the model context.
  */
 
+import type { ToolCallBlock } from '@deepseek-ai/dsh-client-ui-chat/client'
 import type { PropsLocale, PropsRuntime } from '@deepseek-ai/dsh-client-ui-slots'
-import type { ToolCallBlock } from '@deepseek-ai/dsh-client-runtime/client'
 // Type-only: the tool.call.toolview slot declaration and owner props live in
 // ui-tool; cross-package collaboration goes through the service, never a
 // value import (client bundle purity gate).

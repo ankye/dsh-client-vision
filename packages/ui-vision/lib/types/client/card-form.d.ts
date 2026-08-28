@@ -9,8 +9,8 @@
  * asked for and could not preview; staged text makes what is on screen exactly
  * what a save would store.
  */
-import type { SettingsScope } from '@deepseek-ai/dsh-client-runtime/client';
-import { type SnapshotStore } from '@deepseek-ai/dsh-client-runtime/client';
+import { type SnapshotStore } from '@deepseek-ai/dsh-client-store';
+import type { SettingsScope } from '@deepseek-ai/dsh-client-ui-settings/client';
 /** The write one field's staged text performs when the card is saved. */
 export type FieldWrite = {
     kind: 'set';

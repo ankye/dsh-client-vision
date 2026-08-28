@@ -7,9 +7,9 @@ window.__ModuleLoader__.load({
 		let react_jsx_runtime = require("react/jsx-runtime");
 		let react = require("react");
 		let _deepseek_ai_dsh_client_ui_primitives = require("@deepseek-ai/dsh-client-ui-primitives");
-		let _deepseek_ai_dsh_client_runtime_client = require("@deepseek-ai/dsh-client-runtime/client");
-		//#region \0dsh-css:/Users/a1021500561/work/deepseek-harness/packages/client/ui-vision/src/client/fields.module.css.mjs
-		const css$1 = ".t7dRiq_field{flex-direction:column;gap:6px;padding:12px 0;display:flex}.t7dRiq_field+.t7dRiq_field{border-top:1px solid var(--dsw-alias-border-l2)}.t7dRiq_head{align-items:center;gap:8px;display:flex}.t7dRiq_label{min-width:0;color:var(--dsw-alias-label-primary);flex:1;font-size:13px;font-weight:500;line-height:1.5}.t7dRiq_badges{align-items:center;gap:8px;display:inline-flex}.t7dRiq_badge{white-space:nowrap;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px}.t7dRiq_badgeMuted{white-space:nowrap;color:var(--dsw-alias-label-tertiary);border-radius:999px;padding:1px 8px;font-size:11px;line-height:17px}.t7dRiq_reset{font:inherit;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;padding:0;font-size:12px;line-height:1.5}.t7dRiq_reset:hover:not(:disabled){color:var(--dsw-alias-label-primary)}.t7dRiq_reset:disabled{cursor:default}.t7dRiq_input{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);height:34px;font:inherit;color:var(--dsw-alias-label-primary);border-radius:8px;padding:0 12px;font-size:13px;line-height:1.5}.t7dRiq_input:focus-visible{border-color:var(--dsw-alias-brand-primary);outline:none}.t7dRiq_input:disabled{color:var(--dsw-alias-label-tertiary);cursor:default}.t7dRiq_inputInvalid{border-color:var(--dsw-alias-label-error);}.t7dRiq_invalid{color:var(--dsw-alias-label-error);margin:0;font-size:12px;line-height:1.5}.t7dRiq_hint{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:1.5}";
+		let _deepseek_ai_dsh_client_store = require("@deepseek-ai/dsh-client-store");
+		//#region \0dsh-css:/Users/a1021500932/work/deepseek-harness/packages/client/ui-vision/src/client/fields.module.css.mjs
+		const css$1 = ".cpOOmW_field{flex-direction:column;gap:6px;padding:12px 0;display:flex}.cpOOmW_field+.cpOOmW_field{border-top:1px solid var(--dsw-alias-border-l2)}.cpOOmW_head{align-items:center;gap:8px;display:flex}.cpOOmW_label{min-width:0;color:var(--dsw-alias-label-primary);flex:1;font-size:13px;font-weight:500;line-height:1.5}.cpOOmW_badges{align-items:center;gap:8px;display:inline-flex}.cpOOmW_badge{white-space:nowrap;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-secondary);border-radius:999px;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px}.cpOOmW_badgeMuted{white-space:nowrap;color:var(--dsw-alias-label-tertiary);border-radius:999px;padding:1px 8px;font-size:11px;line-height:17px}.cpOOmW_reset{font:inherit;color:var(--dsw-alias-label-secondary);cursor:pointer;background:0 0;border:none;padding:0;font-size:12px;line-height:1.5}.cpOOmW_reset:hover:not(:disabled){color:var(--dsw-alias-label-primary)}.cpOOmW_reset:disabled{cursor:default}.cpOOmW_input{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);height:34px;font:inherit;color:var(--dsw-alias-label-primary);border-radius:8px;padding:0 12px;font-size:13px;line-height:1.5}.cpOOmW_input:focus-visible{border-color:var(--dsw-alias-brand-primary);outline:none}.cpOOmW_input:disabled{color:var(--dsw-alias-label-tertiary);cursor:default}.cpOOmW_inputInvalid{border-color:var(--dsw-alias-label-error);}.cpOOmW_invalid{color:var(--dsw-alias-label-error);margin:0;font-size:12px;line-height:1.5}.cpOOmW_hint{color:var(--dsw-alias-label-tertiary);margin:0;font-size:12px;line-height:1.5}";
 		const tagId$1 = "@deepseek-ai/dsh-client-ui-vision/fields.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId$1) + "]") === null) {
 			const tag = document.createElement("style");
@@ -19,37 +19,37 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var fields_module_css_default = {
-			"badge": "t7dRiq_badge",
-			"hint": "t7dRiq_hint",
-			"label": "t7dRiq_label",
-			"badges": "t7dRiq_badges",
-			"invalid": "t7dRiq_invalid",
-			"input": "t7dRiq_input",
-			"inputInvalid": "t7dRiq_inputInvalid",
-			"badgeMuted": "t7dRiq_badgeMuted",
-			"field": "t7dRiq_field",
-			"head": "t7dRiq_head",
-			"reset": "t7dRiq_reset"
+			"badge": "cpOOmW_badge",
+			"badgeMuted": "cpOOmW_badgeMuted",
+			"badges": "cpOOmW_badges",
+			"field": "cpOOmW_field",
+			"head": "cpOOmW_head",
+			"hint": "cpOOmW_hint",
+			"input": "cpOOmW_input",
+			"inputInvalid": "cpOOmW_inputInvalid",
+			"invalid": "cpOOmW_invalid",
+			"label": "cpOOmW_label",
+			"reset": "cpOOmW_reset"
 		};
 		//#endregion
-		//#region lib/types/client/fields.js
+		//#region src/client/fields.tsx
 		/** A staged value field. */
 		function ValueField(props) {
-			return (0, react_jsx_runtime.jsxs)("div", {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: fields_module_css_default.field,
 				children: [
-					(0, react_jsx_runtime.jsxs)("div", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: fields_module_css_default.head,
-						children: [(0, react_jsx_runtime.jsx)("label", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
 							className: fields_module_css_default.label,
 							htmlFor: props.id,
 							children: props.label
-						}), props.overridden ? (0, react_jsx_runtime.jsxs)("span", {
+						}), props.overridden ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: fields_module_css_default.badges,
-							children: [(0, react_jsx_runtime.jsx)("span", {
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: fields_module_css_default.badge,
 								children: props.overriddenLabel
-							}), (0, react_jsx_runtime.jsx)("button", {
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: fields_module_css_default.reset,
 								disabled: props.disabled,
@@ -58,7 +58,7 @@ window.__ModuleLoader__.load({
 							})]
 						}) : null]
 					}),
-					(0, react_jsx_runtime.jsx)("input", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 						id: props.id,
 						className: props.invalid ? fields_module_css_default.inputInvalid : fields_module_css_default.input,
 						type: "text",
@@ -71,7 +71,7 @@ window.__ModuleLoader__.load({
 							props.onEdit(event.target.value);
 						}
 					}),
-					(0, react_jsx_runtime.jsx)("p", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 						className: props.invalid ? fields_module_css_default.invalid : fields_module_css_default.hint,
 						children: props.invalid ? props.invalidLabel : props.hint
 					})
@@ -80,24 +80,24 @@ window.__ModuleLoader__.load({
 		}
 		/** A write-only credential control. The value never rides a response. */
 		function SecretField(props) {
-			return (0, react_jsx_runtime.jsxs)("div", {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: fields_module_css_default.field,
 				children: [
-					(0, react_jsx_runtime.jsxs)("div", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: fields_module_css_default.head,
-						children: [(0, react_jsx_runtime.jsx)("label", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
 							className: fields_module_css_default.label,
 							htmlFor: props.id,
 							children: props.label
-						}), (0, react_jsx_runtime.jsx)("span", {
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: fields_module_css_default.badges,
-							children: (0, react_jsx_runtime.jsx)("span", {
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: props.configured ? fields_module_css_default.badge : fields_module_css_default.badgeMuted,
 								children: props.stateLabel
 							})
 						})]
 					}),
-					(0, react_jsx_runtime.jsx)("input", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("input", {
 						id: props.id,
 						className: fields_module_css_default.input,
 						type: "password",
@@ -108,7 +108,7 @@ window.__ModuleLoader__.load({
 							props.onEdit(event.target.value);
 						}
 					}),
-					(0, react_jsx_runtime.jsx)("p", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 						className: fields_module_css_default.hint,
 						children: props.hint
 					})
@@ -123,21 +123,21 @@ window.__ModuleLoader__.load({
 		*/
 		function SelectField(props) {
 			const known = props.options.some((option) => option.value === props.text);
-			return (0, react_jsx_runtime.jsxs)("div", {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				className: fields_module_css_default.field,
 				children: [
-					(0, react_jsx_runtime.jsxs)("div", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 						className: fields_module_css_default.head,
-						children: [(0, react_jsx_runtime.jsx)("label", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("label", {
 							className: fields_module_css_default.label,
 							htmlFor: props.id,
 							children: props.label
-						}), props.overridden ? (0, react_jsx_runtime.jsxs)("span", {
+						}), props.overridden ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: fields_module_css_default.badges,
-							children: [(0, react_jsx_runtime.jsx)("span", {
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: fields_module_css_default.badge,
 								children: props.overriddenLabel
-							}), (0, react_jsx_runtime.jsx)("button", {
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 								type: "button",
 								className: fields_module_css_default.reset,
 								disabled: props.disabled,
@@ -146,7 +146,7 @@ window.__ModuleLoader__.load({
 							})]
 						}) : null]
 					}),
-					(0, react_jsx_runtime.jsxs)("select", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("select", {
 						id: props.id,
 						className: fields_module_css_default.input,
 						value: props.text,
@@ -154,16 +154,16 @@ window.__ModuleLoader__.load({
 						onChange: (event) => {
 							props.onEdit(event.target.value);
 						},
-						children: [!known && props.text !== "" ? (0, react_jsx_runtime.jsx)("option", {
+						children: [!known && props.text !== "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 							value: props.text,
 							disabled: true,
 							children: props.text
-						}) : null, props.options.map((option) => (0, react_jsx_runtime.jsx)("option", {
+						}) : null, props.options.map((option) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("option", {
 							value: option.value,
 							children: option.label
 						}, option.value))]
 					}),
-					(0, react_jsx_runtime.jsx)("p", {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 						className: fields_module_css_default.hint,
 						children: props.hint
 					})
@@ -186,8 +186,8 @@ window.__ModuleLoader__.load({
 			return n;
 		}
 		//#endregion
-		//#region \0dsh-css:/Users/a1021500561/work/deepseek-harness/packages/client/ui-vision/src/client/PluginCard.module.css.mjs
-		const css = ".xS_YIG_card{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:12px;list-style:none;transition:border-color .16s,background .16s}.xS_YIG_card:hover{border-color:var(--dsw-alias-label-dimmed)}.xS_YIG_cardOpen{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-label-dimmed)}.xS_YIG_header{appearance:none;width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;border-radius:12px;align-items:center;gap:12px;padding:14px 16px;display:flex}.xS_YIG_header:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}.xS_YIG_headText{flex-direction:column;flex:1;gap:4px;min-width:0;display:flex}.xS_YIG_name{color:var(--dsw-alias-label-primary);font-size:15px;font-weight:600;line-height:1.4}.xS_YIG_description{color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1.5}.xS_YIG_chevron{color:var(--dsw-alias-label-tertiary);flex:none;transition:transform .16s}.xS_YIG_chevronOpen{transform:rotate(180deg)}.xS_YIG_body{border-top:1px solid var(--dsw-alias-border-l2);margin:0 16px;padding-bottom:8px}.xS_YIG_readOnly{color:var(--dsw-alias-label-tertiary);margin:12px 0 0;font-size:12px;line-height:1.5}.xS_YIG_pending{white-space:nowrap;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-secondary);border-radius:999px;flex:none;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px}.xS_YIG_footer{border-top:1px solid var(--dsw-alias-border-l2);justify-content:flex-end;align-items:center;gap:8px;padding:12px 0 4px;display:flex}.xS_YIG_failed{min-width:0;color:var(--dsw-alias-label-error);flex:1;margin:0;font-size:12px;line-height:1.5}.xS_YIG_discard,.xS_YIG_save{appearance:none;font:inherit;cursor:pointer;border:1px solid #0000;border-radius:8px;padding:5px 14px;font-size:13px;line-height:1.5}.xS_YIG_discard{border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:0 0}.xS_YIG_discard:hover:not(:disabled){color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-label-dimmed)}.xS_YIG_save{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-3)}.xS_YIG_discard:disabled,.xS_YIG_save:disabled{opacity:.4;cursor:default}.xS_YIG_discard:focus-visible,.xS_YIG_save:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}";
+		//#region \0dsh-css:/Users/a1021500932/work/deepseek-harness/packages/client/ui-vision/src/client/PluginCard.module.css.mjs
+		const css = ".q3zCpG_card{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-layer-3);border-radius:12px;list-style:none;transition:border-color .16s,background .16s}.q3zCpG_card:hover{border-color:var(--dsw-alias-label-dimmed)}.q3zCpG_cardOpen{background:var(--dsw-alias-bg-layer-2);border-color:var(--dsw-alias-label-dimmed)}.q3zCpG_header{appearance:none;width:100%;font:inherit;color:inherit;text-align:left;cursor:pointer;background:0 0;border:0;border-radius:12px;align-items:center;gap:12px;padding:14px 16px;display:flex}.q3zCpG_header:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:-2px}.q3zCpG_headText{flex-direction:column;flex:1;gap:4px;min-width:0;display:flex}.q3zCpG_name{color:var(--dsw-alias-label-primary);font-size:15px;font-weight:600;line-height:1.4}.q3zCpG_description{color:var(--dsw-alias-label-tertiary);font-size:13px;line-height:1.5}.q3zCpG_chevron{color:var(--dsw-alias-label-tertiary);flex:none;transition:transform .16s}.q3zCpG_chevronOpen{transform:rotate(180deg)}.q3zCpG_body{border-top:1px solid var(--dsw-alias-border-l2);margin:0 16px;padding-bottom:8px}.q3zCpG_readOnly{color:var(--dsw-alias-label-tertiary);margin:12px 0 0;font-size:12px;line-height:1.5}.q3zCpG_pending{white-space:nowrap;background:var(--dsw-alias-bg-module-platform);color:var(--dsw-alias-label-secondary);border-radius:999px;flex:none;padding:1px 8px;font-size:11px;font-weight:500;line-height:17px}.q3zCpG_footer{border-top:1px solid var(--dsw-alias-border-l2);justify-content:flex-end;align-items:center;gap:8px;padding:12px 0 4px;display:flex}.q3zCpG_failed{min-width:0;color:var(--dsw-alias-label-error);flex:1;margin:0;font-size:12px;line-height:1.5}.q3zCpG_discard,.q3zCpG_save{appearance:none;font:inherit;cursor:pointer;border:1px solid #0000;border-radius:8px;padding:5px 14px;font-size:13px;line-height:1.5}.q3zCpG_discard{border-color:var(--dsw-alias-border-l2);color:var(--dsw-alias-label-secondary);background:0 0}.q3zCpG_discard:hover:not(:disabled){color:var(--dsw-alias-label-primary);border-color:var(--dsw-alias-label-dimmed)}.q3zCpG_save{background:var(--dsw-alias-label-primary);color:var(--dsw-alias-bg-layer-3)}.q3zCpG_discard:disabled,.q3zCpG_save:disabled{opacity:.4;cursor:default}.q3zCpG_discard:focus-visible,.q3zCpG_save:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}";
 		const tagId = "@deepseek-ai/dsh-client-ui-vision/PluginCard.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
@@ -197,24 +197,24 @@ window.__ModuleLoader__.load({
 			document.head.appendChild(tag);
 		}
 		var PluginCard_module_css_default = {
-			"save": "xS_YIG_save",
-			"body": "xS_YIG_body",
-			"pending": "xS_YIG_pending",
-			"name": "xS_YIG_name",
-			"header": "xS_YIG_header",
-			"description": "xS_YIG_description",
-			"failed": "xS_YIG_failed",
-			"chevron": "xS_YIG_chevron",
-			"footer": "xS_YIG_footer",
-			"card": "xS_YIG_card",
-			"readOnly": "xS_YIG_readOnly",
-			"headText": "xS_YIG_headText",
-			"discard": "xS_YIG_discard",
-			"chevronOpen": "xS_YIG_chevronOpen",
-			"cardOpen": "xS_YIG_cardOpen"
+			"body": "q3zCpG_body",
+			"card": "q3zCpG_card",
+			"cardOpen": "q3zCpG_cardOpen",
+			"chevron": "q3zCpG_chevron",
+			"chevronOpen": "q3zCpG_chevronOpen",
+			"description": "q3zCpG_description",
+			"discard": "q3zCpG_discard",
+			"failed": "q3zCpG_failed",
+			"footer": "q3zCpG_footer",
+			"headText": "q3zCpG_headText",
+			"header": "q3zCpG_header",
+			"name": "q3zCpG_name",
+			"pending": "q3zCpG_pending",
+			"readOnly": "q3zCpG_readOnly",
+			"save": "q3zCpG_save"
 		};
 		//#endregion
-		//#region lib/types/client/PluginCard.js
+		//#region src/client/PluginCard.tsx
 		/**
 		* One plugin's card: a header naming the plugin and what its settings govern,
 		* disclosing that plugin's controls in place, with the save that writes them
@@ -232,9 +232,9 @@ window.__ModuleLoader__.load({
 			if (!state.available) return null;
 			const title = props.t(props.titleKey);
 			const blocked = !state.dirty || state.invalid || state.saving;
-			return (0, react_jsx_runtime.jsxs)("li", {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("li", {
 				className: clsx(PluginCard_module_css_default.card, open && PluginCard_module_css_default.cardOpen),
-				children: [(0, react_jsx_runtime.jsxs)("button", {
+				children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
 					type: "button",
 					className: PluginCard_module_css_default.header,
 					"aria-expanded": open,
@@ -243,47 +243,47 @@ window.__ModuleLoader__.load({
 						setOpen(!open);
 					},
 					children: [
-						(0, react_jsx_runtime.jsxs)("span", {
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
 							className: PluginCard_module_css_default.headText,
-							children: [(0, react_jsx_runtime.jsx)("span", {
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: PluginCard_module_css_default.name,
 								children: title
-							}), (0, react_jsx_runtime.jsx)("span", {
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 								className: PluginCard_module_css_default.description,
 								children: props.t(props.descriptionKey)
 							})]
 						}),
-						state.dirty ? (0, react_jsx_runtime.jsx)("span", {
+						state.dirty ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
 							className: PluginCard_module_css_default.pending,
 							children: props.t("unsaved")
 						}) : null,
-						(0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: clsx(PluginCard_module_css_default.chevron, open && PluginCard_module_css_default.chevronOpen) })
+						/* @__PURE__ */ (0, react_jsx_runtime.jsx)(_deepseek_ai_dsh_client_ui_primitives.IconChevronDownOutline14, { className: clsx(PluginCard_module_css_default.chevron, open && PluginCard_module_css_default.chevronOpen) })
 					]
-				}), open ? (0, react_jsx_runtime.jsxs)("div", {
+				}), open ? /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 					className: PluginCard_module_css_default.body,
 					children: [
-						!state.writable ? (0, react_jsx_runtime.jsx)("p", {
+						!state.writable ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 							className: PluginCard_module_css_default.readOnly,
 							role: "status",
 							children: props.t("readOnly")
 						}) : null,
 						props.children,
-						(0, react_jsx_runtime.jsxs)("div", {
+						/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 							className: PluginCard_module_css_default.footer,
 							children: [
-								state.failed ? (0, react_jsx_runtime.jsx)("p", {
+								state.failed ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", {
 									className: PluginCard_module_css_default.failed,
 									role: "status",
 									children: props.t("saveFailed")
 								}) : null,
-								(0, react_jsx_runtime.jsx)("button", {
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
 									className: PluginCard_module_css_default.discard,
 									disabled: !state.dirty || state.saving,
 									onClick: props.onDiscard,
 									children: props.t("discard")
 								}),
-								(0, react_jsx_runtime.jsx)("button", {
+								/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
 									className: PluginCard_module_css_default.save,
 									disabled: blocked,
@@ -297,7 +297,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region lib/types/client/card-form.js
+		//#region src/client/card-form.ts
 		/**
 		* Shared form model behind the vision card (self-contained copy; the
 		* browser bundle purity gate forbids importing it from another client
@@ -357,7 +357,7 @@ window.__ModuleLoader__.load({
 				});
 			}
 			bind(project) {
-				const store = (0, _deepseek_ai_dsh_client_runtime_client.createSnapshotStore)(project());
+				const store = (0, _deepseek_ai_dsh_client_store.createSnapshotStore)(project());
 				this.listeners.add(() => {
 					store.set(project());
 				});
@@ -510,16 +510,7 @@ window.__ModuleLoader__.load({
 			}
 		};
 		//#endregion
-		//#region lib/types/client/vision-card-controller.js
-		/**
-		* The vision card's staged form over the `vision` settings namespace.
-		*
-		* The API key is the one control that does not live in the section: its
-		* literal never rides a response, so the card learns only whether one is
-		* configured and writes it through the credentials domain, addressed by the
-		* reference the section names. Channel and model are enum selects, so adding a
-		* recognition channel later is one option here and one section value.
-		*/
+		//#region src/client/vision-card-controller.ts
 		/** Namespace of the vision capability. Spelled here rather than imported. */
 		const VISION_NS = "vision";
 		/** Credential reference the provider resolves when the section names none. */
@@ -556,7 +547,7 @@ window.__ModuleLoader__.load({
 		/** Bridges the `vision` scope and the credentials domain onto the card. */
 		var VisionCardController = class {
 			scope;
-			api;
+			credentials;
 			form;
 			store;
 			credential = {
@@ -566,11 +557,11 @@ window.__ModuleLoader__.load({
 			};
 			/**
 			* @param scope - the bound settings scope for the `vision` namespace.
-			* @param api - wire face used for the credential the section references.
+			* @param credentials - Remote face used for the credential the section references.
 			*/
-			constructor(scope, api) {
+			constructor(scope, credentials) {
 				this.scope = scope;
-				this.api = api;
+				this.credentials = credentials;
 				this.form = new CardForm(scope, [
 					selectField("channel", VISION_CHANNELS),
 					textField("baseUrl"),
@@ -619,12 +610,12 @@ window.__ModuleLoader__.load({
 				}
 				let response;
 				try {
-					response = await this.api.credentials.describe({ refs: [ref] });
+					response = await this.credentials.describe([ref]);
 				} catch (_credentialReadFailure) {
 					return;
 				}
-				if (!response.result.ok || ref !== refOf(this.scope.getSnapshot())) return;
-				const view = response.result.value.credentials[ref];
+				if (!response.ok || ref !== refOf(this.scope.getSnapshot())) return;
+				const view = response.value[ref];
 				const next = {
 					ref,
 					configured: view?.configured ?? false,
@@ -659,10 +650,7 @@ window.__ModuleLoader__.load({
 			*/
 			async writeKey(value) {
 				try {
-					await this.api.credentials.set({
-						ref: refOf(this.scope.getSnapshot()),
-						value
-					});
+					await this.credentials.set(refOf(this.scope.getSnapshot()), value);
 				} catch (_credentialWriteFailure) {}
 				await this.readCredential();
 				return this.credential.configured;
@@ -678,7 +666,7 @@ window.__ModuleLoader__.load({
 			return declared !== void 0 && declared.length > 0 ? declared : DEFAULT_API_KEY_REF;
 		}
 		//#endregion
-		//#region lib/types/client/VisionCard.js
+		//#region src/client/VisionCard.tsx
 		/** Visible labels for the channel options. */
 		const CHANNEL_OPTIONS = [
 			{
@@ -708,7 +696,7 @@ window.__ModuleLoader__.load({
 				label: value
 			}));
 			const channelOptions = CHANNEL_OPTIONS.filter((option) => VISION_CHANNELS.includes(option.value));
-			return (0, react_jsx_runtime.jsxs)(PluginCard, {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)(PluginCard, {
 				t,
 				titleKey: "title",
 				descriptionKey: "description",
@@ -716,7 +704,7 @@ window.__ModuleLoader__.load({
 				onSave: props.save,
 				onDiscard: props.discard,
 				children: [
-					state.keyVisible ? (0, react_jsx_runtime.jsx)(SecretField, {
+					state.keyVisible ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)(SecretField, {
 						id: "plugin-config-vision-key",
 						label: t("apiKey"),
 						hint: t("apiKeyHint"),
@@ -728,7 +716,7 @@ window.__ModuleLoader__.load({
 							props.edit("apiKey", text);
 						}
 					}) : null,
-					(0, react_jsx_runtime.jsx)(ValueField, {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(ValueField, {
 						id: "plugin-config-vision-endpoint",
 						label: t("baseUrl"),
 						hint: t("baseUrlHint"),
@@ -745,7 +733,7 @@ window.__ModuleLoader__.load({
 							props.resetField("baseUrl");
 						}
 					}),
-					(0, react_jsx_runtime.jsx)(SelectField, {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SelectField, {
 						id: "plugin-config-vision-channel",
 						label: t("channel"),
 						hint: t("channelHint"),
@@ -762,7 +750,7 @@ window.__ModuleLoader__.load({
 							props.resetField("channel");
 						}
 					}),
-					(0, react_jsx_runtime.jsx)(SelectField, {
+					/* @__PURE__ */ (0, react_jsx_runtime.jsx)(SelectField, {
 						id: "plugin-config-vision-model",
 						label: t("model"),
 						hint: t("modelHint"),
@@ -783,7 +771,7 @@ window.__ModuleLoader__.load({
 			});
 		}
 		//#endregion
-		//#region lib/types/client/ViewImageToolView.js
+		//#region src/client/ViewImageToolView.tsx
 		/** Marker line the host render emits for screenshot results. */
 		const SHOT_MARKER = /\[view-image: ([^\]]+)\]/;
 		/**
@@ -796,13 +784,13 @@ window.__ModuleLoader__.load({
 			if (!("kind" in block) || block.kind !== "tool-result") return null;
 			const text = block.content.filter((b) => b.type === "text").map((b) => b.text).join("\n");
 			const match = SHOT_MARKER.exec(text);
-			if (match === null) return (0, react_jsx_runtime.jsx)("pre", {
+			if (match === null) return /* @__PURE__ */ (0, react_jsx_runtime.jsx)("pre", {
 				style: { whiteSpace: "pre-wrap" },
 				children: text
 			});
 			const url = match[1];
 			const description = text.replace(SHOT_MARKER, "").trim();
-			return (0, react_jsx_runtime.jsxs)("div", { children: [(0, react_jsx_runtime.jsx)("img", {
+			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", { children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("img", {
 				src: url,
 				alt: "view-image",
 				style: {
@@ -810,11 +798,10 @@ window.__ModuleLoader__.load({
 					borderRadius: 8,
 					display: "block"
 				}
-			}), description !== "" ? (0, react_jsx_runtime.jsx)("p", { children: description }) : null] });
+			}), description !== "" ? /* @__PURE__ */ (0, react_jsx_runtime.jsx)("p", { children: description }) : null] });
 		}
 		//#endregion
-		//#region lib/types/client/locales.js
-		/** Locale bundles for the vision settings card (its own namespace). */
+		//#region src/client/locales.ts
 		/** English copy. */
 		const en = {
 			title: "Vision",
@@ -868,23 +855,13 @@ window.__ModuleLoader__.load({
 			invalidNumber: "请填数字；留空表示使用默认值。"
 		};
 		//#endregion
-		//#region lib/types/client/index.js
-		/**
-		* Vision settings card, browser half — one card registered into the
-		* configurable-plugins tab under the `vision` settings namespace.
-		*
-		* The tab (owned by ui-settings-plugins) enumerates Host-served namespaces
-		* and dispatches cards by key; this package contributes only its own card and
-		* locale. Cross-package collaboration goes through the service — the slot
-		* declaration, the settings scope, the credentials domain — never a value
-		* import (client bundle purity gate).
-		*/
+		//#region src/client/index.ts
 		/** Required services (cordis fiber inject). */
 		const inject = [
 			"slots",
 			"locale",
-			"connection",
 			"remote",
+			"remote.credentials",
 			"settingsScope"
 		];
 		/**
@@ -892,13 +869,12 @@ window.__ModuleLoader__.load({
 		* @param ctx - the browser plugin context.
 		*/
 		function apply(ctx) {
-			const { api } = ctx.get("connection");
 			ctx.effect(() => ctx.locale.register(VISION_NS, {
 				zh,
 				en
 			}), "ui-vision: dictionaries");
-			const vision = new VisionCardController(ctx.settingsScope.bind({ namespace: VISION_NS }), api);
-			ctx.effect(() => ctx.remote.$on("credentials/updated", (ref) => {
+			const vision = new VisionCardController(ctx.settingsScope.bind({ namespace: VISION_NS }), ctx.remote.credentials);
+			ctx.effect(() => ctx.remote.$on("credentials/reference-updated", (ref) => {
 				vision.refreshCredential(ref);
 			}), "ui-vision: credential invalidations");
 			ctx.slots.inject("tool.call.toolview", () => ctx.slots.register({
