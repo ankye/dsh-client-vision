@@ -4,6 +4,10 @@ English | [中文](README.zh.md)
 
 Give your DeepSeek Harness agent **eyes**. `dsh-client-vision` is a screen-capture + external image-recognition plugin for [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness): the agent takes a screenshot (or points at any image), hands it to a vision-capable model through a pluggable channel, and gets back plain text it can actually act on — **no multimodal model required**.
 
+## Compatibility
+
+This revision requires DeepSeek Harness core `0.1.2-alpha.5` or later within the `0.1.x` line. It uses the Settings service API introduced in that core release.
+
 ## Why you want it
 
 - **DeepSeek can't see — now it can.** The harness model has no image input. This plugin runs the whole "look" outside the model and returns text the agent can reason about, exactly like Codex's semantic vision tool.
@@ -105,7 +109,7 @@ The tools (`take_screenshot` / `list_windows` / `analyze_image`) and their schem
 
 ### Prerequisites
 
-- Official DeepSeek Harness (`0.1.0-rc.7` lineage), `dsh` and `pnpm` on PATH.
+- DeepSeek Harness core `0.1.2-alpha.5` or later within the `0.1.x` line, plus `dsh` and `pnpm` on PATH.
 
 ### 1. Get the packages (pick one)
 

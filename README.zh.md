@@ -4,6 +4,10 @@
 
 给你的 DeepSeek Harness agent 装上**眼睛**。`dsh-client-vision` 是面向 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的截图 + 外部图像识别插件：agent 按需截图（或指定任意图片），通过**可插拔通道**交给具备视觉能力的模型，拿回纯文本描述后继续干活——**完全不需要多模态模型**。
 
+## 兼容性
+
+本修订要求 DeepSeek Harness core 为 `0.1.2-alpha.5` 或以上的 `0.1.x` 版本；它使用该 core 版本引入的 Settings 服务 API。
+
 ## 为什么值得装
 
 - **deepseek 看不到？现在能了。** harness 模型没有图像输入。本插件把「看图」整个过程放在模型之外，返回 agent 能直接推理的文本——和 Codex 的语义识图工具一个思路。
@@ -91,7 +95,7 @@ export const channels = {
 
 ### 前置条件
 
-- 官方 DeepSeek Harness（`0.1.0-rc.7` 系），`dsh` 与 `pnpm` 在 PATH。
+- DeepSeek Harness core `0.1.2-alpha.5` 或以上的 `0.1.x` 版本，且 `dsh` 与 `pnpm` 在 PATH。
 
 ### 1. 取包（三选一）
 

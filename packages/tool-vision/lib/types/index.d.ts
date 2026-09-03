@@ -14,7 +14,7 @@ export declare const name = "tool-vision";
 /** Services this plugin consumes (all host-plane; it publishes nothing). */
 export declare const inject: string[];
 /** Settings namespace carrying the vision configuration. */
-export declare const VISION_SETTINGS_NAMESPACE: any;
+export declare const VISION_SETTINGS_NAMESPACE = "vision";
 /** Resolved vision configuration. */
 export interface VisionConfig {
     /** Active recognition channel; defaults to `gpt`. */

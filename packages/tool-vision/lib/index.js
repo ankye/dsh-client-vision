@@ -3,7 +3,6 @@ import { createReadStream } from "node:fs";
 import { basename, isAbsolute, join, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { TOOL_ABORTED, defineTool } from "@deepseek-ai/dsh-tools";
-import { installSettingsSection, settingsNamespace } from "@deepseek-ai/dsh-settings";
 import { credentialRef } from "@deepseek-ai/dsh-credentials";
 import { HarnessError } from "@deepseek-ai/dsh-llm";
 //#region src/capture.ts
@@ -545,7 +544,7 @@ const inject = [
 	"systemPrompt"
 ];
 /** Settings namespace carrying the vision configuration. */
-const VISION_SETTINGS_NAMESPACE = settingsNamespace("vision");
+const VISION_SETTINGS_NAMESPACE = "vision";
 /** Runtime configuration schema for the vision plugin. */
 const Config = z.object({
 	channel: z.string().default("gpt"),
@@ -576,11 +575,13 @@ function sessionShellPolicy(ctx, exec) {
 */
 function apply(ctx, config) {
 	let current = () => config;
-	installSettingsSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
-		setSource: (source) => {
-			current = source;
-		},
-		onChange: () => {}
+	ctx.inject(["settings"], (settingsCtx) => {
+		settingsCtx.settings.installSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
+			setSource: (source) => {
+				current = source;
+			},
+			onChange: () => {}
+		});
 	});
 	let lastScreenshotPath;
 	const webServer = ctx.get("webServer");

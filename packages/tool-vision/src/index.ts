@@ -21,7 +21,7 @@ import { basename, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { defineTool, type ToolRunContext } from '@deepseek-ai/dsh-tools'
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings'
+import type {} from '@deepseek-ai/dsh-settings'
 import { buildScreenshotCommand, captureDependencyHint, currentPlatform, deviceCaptureHint, listWindowsViaShell, shellOutputPath, type ScreenshotArgs, type WindowEntry } from './capture.ts'
 import { imageSizeOf, prepareImage } from './image.ts'
 import { channels } from './channels/index.ts'
@@ -34,7 +34,7 @@ export const name = 'tool-vision'
 export const inject = ['tools', 'shell', 'fs', 'systemPrompt']
 
 /** Settings namespace carrying the vision configuration. */
-export const VISION_SETTINGS_NAMESPACE = settingsNamespace('vision')
+export const VISION_SETTINGS_NAMESPACE = 'vision'
 
 /** Resolved vision configuration. */
 export interface VisionConfig {
@@ -107,9 +107,11 @@ function sessionShellPolicy(ctx: Context, exec: ToolRunContext): SandboxExecutio
  */
 export function apply(ctx: Context, config: VisionConfig): void {
   let current: () => VisionConfig = () => config
-  installSettingsSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
-    setSource: (source) => { current = source },
-    onChange: () => {},
+  ctx.inject(['settings'], (settingsCtx) => {
+    settingsCtx.settings.installSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
+      setSource: (source) => { current = source },
+      onChange: () => {},
+    })
   })
 
   let lastScreenshotPath: string | undefined

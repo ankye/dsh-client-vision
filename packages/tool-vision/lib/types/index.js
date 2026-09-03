@@ -12,7 +12,6 @@ import { createReadStream } from 'node:fs';
 import { basename, join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { defineTool } from '@deepseek-ai/dsh-tools';
-import { installSettingsSection, settingsNamespace } from '@deepseek-ai/dsh-settings';
 import { buildScreenshotCommand, captureDependencyHint, currentPlatform, deviceCaptureHint, listWindowsViaShell, shellOutputPath } from "./capture.js";
 import { imageSizeOf, prepareImage } from "./image.js";
 import { channels } from "./channels/index.js";
@@ -22,7 +21,7 @@ export const name = 'tool-vision';
 /** Services this plugin consumes (all host-plane; it publishes nothing). */
 export const inject = ['tools', 'shell', 'fs', 'systemPrompt'];
 /** Settings namespace carrying the vision configuration. */
-export const VISION_SETTINGS_NAMESPACE = settingsNamespace('vision');
+export const VISION_SETTINGS_NAMESPACE = 'vision';
 /** Runtime configuration schema for the vision plugin. */
 export const Config = z.object({
     channel: z.string().default('gpt'),
@@ -55,9 +54,11 @@ function sessionShellPolicy(ctx, exec) {
  */
 export function apply(ctx, config) {
     let current = () => config;
-    installSettingsSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
-        setSource: (source) => { current = source; },
-        onChange: () => { },
+    ctx.inject(['settings'], (settingsCtx) => {
+        settingsCtx.settings.installSection(ctx, VISION_SETTINGS_NAMESPACE, Config, config, {
+            setSource: (source) => { current = source; },
+            onChange: () => { },
+        });
     });
     let lastScreenshotPath;
     // Serve screenshot PNGs to the browser UI (the model context keeps text only).
